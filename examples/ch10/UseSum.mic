@@ -1,0 +1,9 @@
+// tag::usesum[]
+module UseSum
+import s1 := Sum(int32)
+var a: array 3 of int32
+begin
+    a[0] := 1; a[1] := 2; a[2] := 39
+    println(s1.sum(@a, 3))      // 42
+end UseSum
+// end::usesum[]

@@ -1,0 +1,11 @@
+// generic module: not compiled standalone, instantiated by UsePrinter.mic
+// tag::printer[]
+module Printer(T) [level = 2]
+import Writable
+where T: Writable.Writer
+procedure writeTwice*(x: ^T)
+begin
+    x.write(); x.write()
+end writeTwice
+end Printer
+// end::printer[]

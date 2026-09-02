@@ -1,0 +1,36 @@
+module Format
+
+// tag::format[]
+type str = array of char
+
+procedure format(const fmt: ^array of char; const args: ^array of ^any)
+var i, a: uint32
+begin
+    i := 0; a := 0
+    while fmt[i] # 0x do
+        if fmt[i] = '%' then
+            inc(i)
+            case fmt[i] of
+            | 'd': print(cast(@int32, args[a])^); inc(a)
+            | 's': print(cast(@str, args[a])); inc(a)
+            | 'c': print(cast(@char, args[a])^); inc(a)
+            | '%': print('%')
+            end
+        else
+            print(fmt[i])
+        end
+        inc(i)
+    end
+end format
+// end::format[]
+
+// tag::formatdecl[]
+var n: int32; c: char; s: array 8 of char
+// end::formatdecl[]
+
+begin
+    // tag::formatcall[]
+    n := 42; c := 'x'; s := "world"
+    format("hello %s: n = %d, c = %c (100%%)", @{@s, @n, @c}); println("")
+    // end::formatcall[]
+end Format

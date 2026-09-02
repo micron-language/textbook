@@ -1,0 +1,89 @@
+[[app-a]]
+[appendix]
+=== The Tools
+
+This appendix collects what is needed to reproduce every example of the book.
+The main text uses the tools without explaining them; this is the one place that does.
+
+==== micc
+
+`micc` is the Micron compiler.
+One invocation parses the main module, follows its imports, 
+compiles everything, and links.
+There is no separate build system for a Micron program;
+the import graph is the build description.
+
+The modes, selected by one option each:
+
+[cols="1,3"]
+|===
+| (none)    | compile and link an executable for the selected target
+| `--run`   | run the program in the built-in MIL interpreter, no code generated
+| `--check` | parse and check only, no code generated
+| `-c`      | compile all modules to object files (`.mob`), do not link
+|===
+
+The options used throughout this book:
+
+[cols="1,3"]
+|===
+| `-I <path>` | add a directory searched for imported modules (`.mic`, `.mil`, `.mob`)
+| `-o <file>` | name of the executable (link mode)
+| `--target <t>` | code generator: `rv32`, `rv32-esp32`, `armv7` or `x86`
+| `--base <addr>` | load address of the executable, hexadecimal
+| `--runtime <file>` | a MIL file implementing the `MIC$` runtime, for freestanding targets
+| `--abi <default\|c>` | calling convention; `c` for interoperation with C
+| `--dump <mil\|mll\|mrl>` | write the intermediate representation next to the output
+| `-g` | generate debug information
+| `-q` | report only warnings and errors
+| `-l`, `-L` | link C archives, as usual
+|===
+
+The main argument is a module file or a project file (`.micpro`),
+followed optionally by foreign object files and archives for the linker.
+
+Most examples of this book are hosted programs and run with the interpreter:
+
+[source,shell]
+----
+micc --run Example.mic -I <oakwood>
+----
+
+where `<oakwood>` is the directory of the oakwood library
+(`Out`, `In`, `Files`, `Args`, `Math`...) that ships with the Micron repository TBD
+
+==== The RV32 emulator
+
+The Micron System of <<part3>> runs on `rv32vm`,
+an emulator combining the rv32emu RISC-V interpreter core,
+Berkeley SoftFloat, and the Project Oberon devices
+(display, PS/2 keyboard and mouse, SPI disk, timer, LEDs, RS232)
+rendered through SDL2.
+It lives in the `vm` directory of the OberonSystem repository and builds with
+one script:
+
+[source,shell]
+----
+cd vm && ./build.sh        # requires a C compiler and SDL2 (sdl2-config)
+----
+
+The result is `vm/build/rv32vm`.
+Its two relevant options are `--elf`, to load a statically linked ELF file
+such as the one `micc` produces, and `--ram <MB>`, the RAM size that ends up
+in the boot header.
+
+==== Building and running the Micron System
+
+With `micc` and `rv32vm` in place, the system builds and boots with two
+commands from the system's source directory:
+
+[source,shell]
+----
+micc --target rv32 -g --base 0 --runtime MIC+.mil -I . -o Main Main.mic
+rv32vm --elf --ram 4 --disk disk.img Main
+----
+
+`disk.img` is a plain file serving as the SPI disk;
+it contains the Oberon file system with the fonts and sample texts.
+
+TBD

@@ -1,0 +1,125 @@
+[[ch10]]
+=== Generic Modules
+
+A stack of integers and a stack of characters differ in one type name and nothing else.
+Languages without generics offer two bad answers: copy the code, or erase the type
+(the `void*` container of C, with the type checks abandoned at the door).
+Micron's answer is the generic module: the unit of genericity is the module itself,
+not the individual type or procedure.
+This is the approach of Oberon+ and, before it, of Modula-3's generic interfaces,
+and Ada's generic packages, and CLU's clusters, and it keeps the machinery remarkably small.
+
+==== Meta parameters
+
+A module becomes generic by a list of meta parameters after its name.
+Meta parameters denote types or, with the `const` prefix, constants.
+A parameter may carry a constraint like an ordinary parameter declaration,
+as `CAP: uint32` below.
+
+[source]
+----
+include::../examples/ch10/Stack.mic[tag=stack]
+----
+
+Inside the module, `T` and `CAP` are used like an ordinary type and an ordinary constant:
+`CAP` fixes the length of a static array, `T` its element type.
+Nothing in the module says integers or characters, and the compiler accepts every operation
+that is valid for any type, such as assignment and parameter passing.
+An unconstrained meta parameter is itself generic: without the `uint32` constraint,
+`CAP` would have no integer type and could not serve as an array length.
+Constraints are the subject of a later section; the Stack needs this one from the start.
+
+==== Instantiation at import
+
+A generic module is instantiated by importing it with actual meta parameters,
+which must be constant expressions or type names:
+
+[source]
+----
+include::../examples/ch10/UseStack.mic[tag=usestack]
+----
+
+Every distinct set of meta actuals creates a distinct module: `si` and `cs` have
+separate storage, separate `n`, and separate module bodies, executed like any other imported
+module body.
+The identity is determined by the actuals, not by the import:
+two imports of `Stack(integer, 10)`, in the same module or in different ones,
+denote the same instance, so generic instances are shared across a program
+the way ordinary modules are.
+The same generic module may be instantiated several times in the same importer,
+distinguished by the alias.
+There is no instantiation at the call site and no inference: what is generic and where
+it becomes concrete is visible in the import list, and the cost model is that of ordinary modules.
+
+For a systems language the constant meta parameter matters as much as the type parameter.
+A driver can import `Stack(Frame, 32)` and get a statically allocated, fixed-capacity structure
+with no heap involvement; the same generic module serves at level 1, where `new` does not exist.
+This is the intended pattern for driver buffers, DMA descriptor rings and similar fixed-size
+structures, typed without preprocessor arithmetic.
+
+==== Constraints
+
+An unconstrained meta parameter permits only the operations that every type supports.
+The `sum` procedure below needs more, namely `+` and the constant 0, so it constrains `T`.
+A constraint on a basic type is written inline, as here and in the Stack;
+for types the heading cannot see yet, imported interfaces among them,
+the `where` declaration after the import list constrains the parameter by name.
+Each meta parameter takes at most one constraint:
+
+[source]
+----
+include::../examples/ch10/Sum.mic[tag=sum]
+----
+
+[source]
+----
+include::../examples/ch10/UseSum.mic[tag=usesum]
+----
+
+The constraint names a type with which the actual parameter must be assignment compatible;
+`integer` admits the signed integer family.
+The constraint is checked when the module is instantiated,
+and within the generic module it determines the permitted operations,
+so a misuse of `T` is reported in the generic module, at the place that causes it,
+not as an avalanche in the client's build.
+
+A constraint can also be an interface type, a use of interfaces at compile time
+that I have not seen in other languages.
+The actual type must satisfy the interface structurally; it need not be declared with any
+reference to it:
+
+[source]
+----
+include::../examples/ch10/Writable.mic[tag=writable]
+----
+
+[source]
+----
+include::../examples/ch10/Printer.mic[tag=printer]
+----
+
+[source]
+----
+include::../examples/ch10/UsePrinter.mic[tag=useprinter]
+----
+
+Within `Printer`, the constraint tells the compiler that `T` has a `write` procedure,
+so `x.write()` is legal and statically checked.
+`Star` satisfies `Writer` by shape alone.
+Readers coming from Go will recognize the idea and notice what is absent:
+there are no type sets, no unions of constraints, no interplay between methods and operators.
+A constraint is a type, satisfaction is the ordinary compatibility test,
+and the semantics of the generic module can be read without a second language in the head.
+It is also what sets these generics apart from their Modula-3 ancestors,
+where a generic interface stated no constraints at all
+and errors surfaced only when an instantiation was compiled.
+
+==== What generics replace
+
+The C programmer covers this ground with macros and `void*`; the specification's own summary is
+accurate: generic modules offer most of the capabilities of preprocessor macros,
+but parsed, scoped and type checked.
+The price of the module-level granularity is that a single generic procedure needs a module around it.
+In practice the module boundary was already there: a container, its operations and its
+invariants belong together, and the AWFY collection classes TBD, `Vector(T)` among them,
+show the pattern in a real application.

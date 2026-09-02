@@ -1,0 +1,75 @@
+module Shapes
+
+// tag::record[]
+type
+    Point = record x, y: integer end
+    Rect  = record origin: Point; w, h: integer end
+// end::record[]
+
+// tag::variant[]
+type
+    Kind  = (rect, circle)
+    Shape = record
+                kind: Kind
+                case
+                | r: Rect
+                | radius: integer
+            end
+// end::variant[]
+
+// tag::embed[]
+type
+    Named = record
+                inline p: Point
+                name: array 16 of char
+            end
+// end::embed[]
+
+// tag::proctype[]
+type
+    Area = procedure(const s: ^Shape): integer
+// end::proctype[]
+
+procedure rectArea(const s: ^Shape): integer
+begin
+    return s.r.w * s.r.h
+end rectArea
+
+procedure circleArea(const s: ^Shape): integer
+begin
+    return 3 * s.radius * s.radius   // coarse
+end circleArea
+
+var
+    s1, s2: Shape
+    n: Named
+    f: Area
+    grid: array 2 of array 3 of integer
+    i, j: integer
+
+begin
+    // see TESTLATER.md #3: record constructors are not implemented yet;
+    // the book shows s1 := Shape{ kind: rect, r: Rect{ Point{1,2}, 10, 20 } }
+    s1.kind := rect
+    s1.r.origin.x := 1; s1.r.origin.y := 2
+    s1.r.w := 10; s1.r.h := 20
+    s2.kind := circle
+    s2.radius := 5
+
+    f := rectArea
+    println(f(@s1))         // 200
+    f := circleArea
+    println(f(@s2))         // 75
+
+    // tag::embedbody[]
+    n.x := 3                // the fields of Point appear in Named
+    n.p.y := 4              // the explicit path is also valid
+    n.name := "origin"
+    println(n.x + n.p.y)    // 7
+    // end::embedbody[]
+
+    for i := 0 to 1 do
+        for j := 0 to 2 do grid[i][j] := i*3 + j end
+    end
+    println(grid[1][2])     // 5
+end Shapes

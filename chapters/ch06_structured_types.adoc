@@ -1,0 +1,234 @@
+[[ch06]]
+=== Structured Types
+
+The basic types of <<ch03>> are combined into structured types in four ways: as arrays, records, 
+pointers and procedure types. 
+TBD
+This chapter also introduces constructors, the literal notation for writing structured values.
+
+==== Arrays
+
+An array is a sequence of elements of one type, indexed from 0.
+A fixed array declares its length as a constant expression:
+
+----
+var line: array 128 of char
+    m: array 2 of array 3 of integer    // an array of arrays
+----
+
+Arrays are one-dimensional; a matrix is an array of arrays, indexed `m[i][j]`.
+The length of a fixed array is a compile-time quantity, obtained with `len`.
+Whole arrays of the same type may be assigned with one assignment.
+
+An _open_ array, written `array of T` or `[]T`, leaves the length out of the type.
+Open arrays occur in two places: as the base type of a pointer,
+and as the type of dynamically allocated storage (<<ch08>>).
+TBD.
+No length is stored, no descriptor exists, and the program passes the length separately, as it would in C.
+What Micron adds over C is that fixed arrays do know their length at compile time, that `len` yields it,
+and that index checks can be generated where lengths are known.
+
+A string is an array of char terminated by the character `0x`, as in C.
+A string literal may be assigned to any char array it fits into, and `strlen` returns the length up to the terminator.
+
+===== Working with arrays
+
+A short worked example shows the idioms together.
+The task: count how often each letter occurs in a line of text.
+The natural data structure is an array of 26 counters,
+indexed by the letter's position in the alphabet,
+and the index is computed from the character with `ord`,
+the technique every table-driven program uses:
+
+[source]
+----
+include::../examples/ch06/Histogram.mic[tag=hist]
+----
+
+The parameter types deserve a look.
+The line arrives as `const ^[]char`, a pointer to an open array:
+the procedure works for a line of any length and promises
+not to modify it, and no length parameter is needed
+because the string carries its own terminator.
+The counters arrive as `^[26]uint32`, a pointer to a _fixed_ array:
+here the length is part of the contract,
+and an index computed from a letter can be checked against it.
+Choosing between the two forms, open when the length is the caller's
+business, fixed when it is part of the type,
+is a small decision that recurs in every Micron program.
+The calling module owns the storage and passes both addresses:
+
+[source]
+----
+include::../examples/ch06/Histogram.mic[tag=histbody]
+----
+
+Note `len(freq)` in the loops: because the length of a fixed array
+is a compile-time quantity, changing 26 in the declaration
+adjusts every loop, and no separate size constant needs maintaining.
+
+==== Records
+
+A record combines a fixed number of fields with possibly different types:
+
+[source]
+----
+include::../examples/ch06/Shapes.mic[tag=record]
+----
+
+Fields are accessed by name, `r.origin.x`, and records of the same type are assignable as a whole.
+When a record type is exported, its fields stay private unless individually marked;
+a module can thus publish a type as an opaque handle, or expose some fields read-only with `-`.
+The layout of a record follows the same rules as a C struct on the target platform,
+which matters for interoperability and for memory-mapped hardware.
+
+===== Embedded records
+
+A field of record type may be prefixed with `inline`, which makes the field name transparent:
+the members of the embedded record appear as members of the enclosing one, while the explicit path remains valid.
+
+[source]
+----
+include::../examples/ch06/Shapes.mic[tag=embed]
+----
+
+[source]
+----
+include::../examples/ch06/Shapes.mic[tag=embedbody]
+----
+
+Go programmers know this as struct embedding; here as there,
+it gives composition much of the convenience that inheritance is usually bought for,
+without introducing any subtype relation.
+If names collide, the directly declared member wins, and the embedded one stays reachable through its explicit path.
+
+===== Arrays of records
+
+The most common composite of the two constructors so far
+is the _table_: an array whose elements are records.
+A table of mountains, to be sorted by height:
+
+[source]
+----
+include::../examples/ch06/Table.mic[tag=type]
+----
+
+Sorting moves whole entries, and whole-record assignment
+makes the insertion sort read like its textbook description:
+
+[source]
+----
+include::../examples/ch06/Table.mic[tag=sort]
+----
+
+`t := a[i]` copies the complete entry, name and height together,
+where a C program would call `memcpy` or copy field by field;
+the compiler knows the size from the type.
+Note also that the procedure takes `^[]Entry` with a separate count:
+the sort works for a table of any length,
+so the open-array form with an explicit `n` is the right signature,
+the same decision as in the histogram example.
+Filling and printing the table completes the program:
+
+[source]
+----
+include::../examples/ch06/Table.mic[tag=body]
+----
+
+The name field is assigned with a string literal,
+using the rule stated in the array section;
+the assignment checks at compile time that the literal fits.
+Running the module prints the four peaks in descending order.
+Tables of records, searched, sorted or indexed,
+are the workhorse data structure of systems programs TBD.
+
+===== Variant records
+
+A record may end in a variant part: a set of alternative field groups that share the same storage,
+discriminated by a tag field that the program maintains:
+
+[source]
+----
+include::../examples/ch06/Shapes.mic[tag=variant]
+----
+
+The size of the variant part is the size of its largest alternative.
+This is the classical variant record of Pascal,
+or the tagged union that C programmers assemble by hand from a `union` inside a `struct`;
+Micron gives the pattern a syntax but, at this language level, no enforcement, exactly like C.
+Systems code needs the overlay; file formats, protocol frames and instruction encodings are variant records by nature.
+Where checked alternatives are wanted, object types with type tests provide them. TBD
+
+===== Bit fields
+
+Fields of boolean or integer type in the fixed part may be packed at the bit level by appending `bits n` to
+the field declaration:
+
+----
+type Status = record
+    ready:  bool bits 1
+    error:  bool bits 1
+    ..      bits 2          // explicit padding
+    count:  uint8 bits 4
+end
+----
+
+Consecutive `bits` fields are grouped into packing units, each sized to the smallest integer type that holds them,
+and `..` inserts explicit padding.
+In contrast to C,
+where the layout of bit-fields is implementation-defined and their use in drivers a portability hazard,
+the packing rules are part of the language.
+TBD
+
+==== Pointers
+
+A pointer holds the address of a value of its base type, which may be any type: a record, an array, a basic type,
+a procedure.
+The declaration is `pointer to T` or, shorter, `^T`; dereferencing is `p^`,
+and the two usual abbreviations of the Oberon family apply, `p.f` for `p^.f` and `p[i]` for `p^[i]`.
+
+A pointer value comes from three sources: `nil`; the address operator `@` applied to a variable, parameter,
+field or array element; or dynamic allocation with `new`, `newinit` or `newgc` (<<ch08>>).
+The second source distinguishes Micron sharply from Oberon, whose pointers could refer to heap records only.
+Micron pointers may point into the stack, into module variables, into the middle of arrays and records.
+That is what systems programming requires, and it is what Oberon had to hide behind SYSTEM.ADR and untyped loopholes.
+Micron admits the capability openly and keeps it typed; `ptroff(p,
+n)` performs typed address arithmetic where a driver or an allocator genuinely needs it.
+
+==== Procedure types
+
+A procedure type describes a parameter list and result type; its values are procedures and `nil`:
+
+[source]
+----
+include::../examples/ch06/Shapes.mic[tag=proctype]
+----
+
+A procedure variable is assigned any procedure whose signature matches, and called like a procedure.
+The example module stores `rectArea` and `circleArea` in the same variable and computes areas through it;
+TBD.
+C has the same feature with a less readable notation; Pascal and Oberon programmers will feel at home.
+
+[[constructors]]
+==== Constructors
+
+A constructor writes a structured value as a literal: an optional type name followed by a braced component list.
+
+----
+s1 := Shape{ kind: rect, r: Rect{ Point{1,2}, 10, 20 } }
+s2 := Shape{ kind: circle, radius: 5 }
+----
+
+Components may be positional, named (`field: value`), or indexed for arrays (`[3]: x`);
+unnamed fields receive their `default` value, so a partial constructor is well-defined.
+When the target type is known, the type name may be dropped.
+If all components are constant, the constructor is a constant and may appear in const declarations,
+giving initialized tables at no run-time cost.
+A char array takes a string literal as constructor, a byte array a hex string.
+For a record with a variant part, the components must be named and only one variant may be set.
+Prefixed with `@`, a constructor denotes an anonymous local variable,
+convenient for passing a one-off argument by pointer.
+
+Constructors came to Micron from Luon,
+and they remove a whole class of initialization boilerplate that Oberon programs paid for the absence of:
+the assignments in the example above would otherwise be eight statements.

@@ -1,0 +1,32 @@
+[[app-i]]
+[bibliography]
+=== Bibliography
+
+- [[[R1]]] R. Keller:
+  *Oberon+ Language Report.*
+  oberon-lang.github.io.
+- [[[R2]]] N. Wirth, J. Gutknecht:
+  *Project Oberon. The Design of an Operating System, a Compiler, and a Computer.*
+  Edition 2013. projectoberon.net.
+- [[[R3]]] A. Goldberg, D. Robson:
+  *Smalltalk-80: The Language and its Implementation.*
+  Addison-Wesley, 1983.
+- [[[R4]]] S. Pemberton, M. Daniels:
+  *Pascal Implementation: The P4 Compiler and Interpreter.*
+  Ellis Horwood, 1982. homepages.cwi.nl/~steven/pascal.
+- [[[R5]]] R. Keller:
+  *Are We Fast Yet? Micron Implementations.*
+  github.com/rochus-keller/Are-we-fast-yet/tree/main/Micron.
+- [[[R6]]] N. M. Holm:
+  *Scheme 9 from Empty Space.*
+  Lulu Press, 2007ff. t3x.org.
+- [[[R7]]] H. Mössenböck, N. Wirth:
+  *The Programming Language Oberon-2.*
+  ETH Zürich, 1992/1996.
+- [[[R8]]] N. Wirth:
+  *The Programming Language Oberon.*
+  Oberon-07 revision, 2013/2016. projectoberon.net.
+- [[[R9]]] R. Keller:
+  *The Micron Programming Language Specification.*
+  Distributed with the Micron source repository.
+

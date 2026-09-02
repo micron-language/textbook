@@ -1,0 +1,19 @@
+// tag::module[]
+module Sorter
+
+procedure sort*(a: ^[]integer; n: uint32)
+var i, j, t: integer
+begin
+    for i := 1 to n-1 do
+        t := a[i]
+        j := i-1
+        while (j >= 0) & (a[j] > t) do
+            a[j+1] := a[j]
+            dec(j)
+        end
+        a[j+1] := t
+    end
+end sort
+
+end Sorter
+// end::module[]

@@ -1,0 +1,5 @@
+// tag::writable[]
+module Writable [visibility = "*", level = 2]
+type Writer* = interface proc write() end
+end Writable
+// end::writable[]

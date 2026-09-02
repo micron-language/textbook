@@ -1,0 +1,80 @@
+[[app-f]]
+[appendix]
+=== Predeclared Types and Procedures
+
+A compact reference, condensed from the language specification <<R9>>;
+consult the specification for the precise argument and result types and the
+halting conditions.
+
+==== Predeclared types
+
+[cols="1,2",options="header"]
+|===
+|Name |Meaning
+
+|`boolean` |truth values, see <<ch03>>
+|`char`    |Latin-1 character
+|`int8 int16 int32 int64` |signed integers; `shortint`, `integer`, `longint` and `i1..i8` are synonyms
+|`uint8 uint16 uint32 uint64` |unsigned integers; `byte` and `u1..u8` are synonyms
+|`flt32 flt64` |floating-point; `real`, `longreal`, `r4`, `r8` are synonyms
+|`set` |set of the integers 0..31
+|`any` |opaque type, only usable as a pointer base type; a `pointer to any` is assignment compatible with all pointer types, like `void*` in C
+|===
+
+==== Predeclared function procedures
+
+[cols="1,3",options="header"]
+|===
+|Name |Function
+
+|`abs(x)` |absolute value of a numeric x
+|`asr(x,n)` |arithmetic shift right of a signed x
+|`shl(x,n)` `shr(x,n)` |logical shifts
+|`band(x,y)` `bor(x,y)` `bxor(x,y)` `bnot(x)` |bitwise operations on integers 
+|`bset(x)` |the set with the bits of the unsigned x
+|`cap(x)` |the upper-case letter of x
+|`cast(T,x)` |bit reinterpretation between numeric or pointer types; with `@`, a pointer created in place 
+|`chr(x)` |the character with ordinal x
+|`default(T)` |the default value of T (zero, false, nil, 0X)
+|`floor(x)` |largest integer <= the real x, as signed integer
+|`flt(x)` |the signed integer x as floating-point value
+|`getenv(T,n)` `getenv(T,n,d)` |the value of environment element n, optionally with default d 
+|`len(v)` |the length of a fixed-size array
+|`min(T)` `max(T)` |smallest/largest value of a basic, set or enumeration type
+|`min(x,y)` `max(x,y)` |the smaller/larger of two values
+|`obdiv(x,y)` `obmod(x,y)` |Oberon's truncating division and its remainder (<<ch03>>)
+|`odd(x)` |whether the integer x is odd
+|`ord(x)` |the ordinal of a char, boolean or enumeration value
+|`ptroff(p,n)` |pointer p displaced by n elements 
+|`sigc(x)` |bitwise reinterpret an unsigned x as a signed integer of the same width (<<ch03>>)
+|`sigl(x)` |convert an unsigned x to the next larger signed type, preserving the value (<<ch03>>)
+|`usig(x)` |bitwise reinterpret a signed x as an unsigned integer of the same width (<<ch03>>)
+|`size(T)` |size of a simple type T in bytes, as `uint32` 
+|`strlen(s)` |length of the string s without the terminating 0X
+|`val(T,x)` |value conversion between numeric types, or ordinal to enumeration
+|===
+
+==== Predeclared proper procedures
+
+[cols="1,3",options="header"]
+|===
+|Name |Function
+
+|`assert(x)` `assert(x,n)` |terminate program execution if not x, optionally with code n 
+|`halt(n)` |terminate program execution with code n
+|`inc(v)` `inc(v,n)` `dec(v)` `dec(v,n)` |increment/decrement in place
+|`incl(v,x)` `excl(v,x)` |include/exclude element x in the set v
+|`copy(d,s,n)` |copy up to n-1 characters from s^ to d^, always 0X terminated
+|`new(p)` `new(p,n)` |allocate, arrays with n elements (<<ch08>>)
+|`newinit(p, ...)` |allocate and initialize (<<ch08>>)
+|`newgc(p)` `newgc(p,n)` |allocate garbage-collected (<<ch08>>), level 5
+|`dispose(p)` |deallocate (<<ch08>>)
+|`pcall(e,p,...)` `raise(e)` |protected call and exception raise, levels 3+
+|`print(a)` `println(a)` |write a value to the console, mainly for debugging
+|`setenv(n,v)` |set environment element n to v
+|`getreg(r,v)` `putreg(r,v)` |read/write a processor register, levels 0 and 1 
+|`cli()` `sti()` |disable/enable maskable interrupts, levels 0 and 1
+|`nop()` |emit a NOP, for timing loops and pipeline flushes, levels 0 and 1
+|===
+
+Which predeclared procedures are available at which language level is summarized in <<app-g>>.

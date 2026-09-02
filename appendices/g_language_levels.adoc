@@ -1,0 +1,47 @@
+[[app-g]]
+[appendix]
+=== Language Levels Quick Reference
+
+The level concept is introduced in <<ch02>> and used throughout;
+this is the summary table.
+
+[cols="1,2,2,4",options="header"]
+|===
+|Level |Name |Focus |Key features added
+
+|0 |Bootstrap |Hardware init
+|Inlined code, `getreg`/`putreg`/`cli`/`sti`. No stack.
+
+|1 |Systems |Drivers, kernels
+|Stack frames, recursion, static bound procedures. `extern` allowed.
+
+|2 |Abstract |Logic, safety
+|Interfaces (dispatch), `finally`.
+
+|3 |Dynamic |Application data
+|Heap (`new`/`dispose`), pointers to heap, optional exceptions
+(`pcall`/`raise`).
+
+|4 |Object |Hierarchies
+|Type extension (inheritance), dynamic dispatch, `is`, type guards,
+type `case`.
+
+|5 |Managed |Automatic memory
+|Garbage collection (`newgc`).
+|===
+
+The rules:
+
+- A module declares its level in the module attributes,
+  for example `module Kernel [level=1]`;
+  without the attribute, level 3 is assumed.
+- A module may import only modules of the same or a lower level.
+- Since a module body runs before the bodies of its importers,
+  lower-level modules are initialized before higher-level ones.
+
+The level is a claim checked by the compiler:
+a level 1 module cannot use the heap even by accident,
+and a level 4 module cannot silently start depending on the collector.
+In the Micron System the attribute does real work
+(`SYS`, `MIC`, `Kernel`, `FileDir` at level 1; `Display`, `Input` at 4;
+the rest at 5). TBD

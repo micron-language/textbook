@@ -1,0 +1,60 @@
+module Lists [level = 3]
+
+// tag::list[]
+type
+    Item     = ^ItemDesc
+    ItemDesc = record value: integer; next: Item end
+
+procedure prepend(head: ^Item; v: integer)
+var p: Item
+begin
+    new(p)
+    p.value := v
+    p.next := head^
+    head^ := p
+end prepend
+
+procedure sum(p: Item): integer
+var s: integer
+begin
+    s := 0
+    while p # nil do s := s + p.value; p := p.next end
+    return s
+end sum
+
+procedure free(head: ^Item)
+var p, q: Item
+begin
+    p := head^
+    while p # nil do q := p.next; dispose(p); p := q end
+    head^ := nil
+end free
+// end::list[]
+
+// tag::openarray[]
+procedure fill(a: ^[]integer; n: uint32)
+var i: integer
+begin
+    for i := 0 to n-1 do a[i] := i*i end
+end fill
+// end::openarray[]
+
+var
+    head: Item
+    a: ^[]integer
+    i: integer
+
+begin
+    head := nil
+    for i := 1 to 4 do prepend(@head, i) end
+    println(sum(head))      // 10
+    free(@head)
+    println(head = nil)     // true
+
+    // tag::openarraybody[]
+    new(a, 5)               // allocate 5 integers, uninitialized
+    fill(a, 5)
+    println(a[4])           // 16
+    dispose(a)
+    // end::openarraybody[]
+end Lists

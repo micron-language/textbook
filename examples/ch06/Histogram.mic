@@ -1,0 +1,40 @@
+// Working with arrays and strings: a letter histogram.
+module Histogram
+
+var line: array 128 of char
+
+// tag::hist[]
+procedure tally(const s: ^[]char; freq: ^[26]uint32)
+    var
+        i: uint32
+        ch: char
+begin
+    i := 0
+    while s[i] # 0x do
+        ch := s[i]
+        if (ch >= 'a') and (ch <= 'z') then
+            inc(freq[ord(ch) - ord('a')])
+        elsif (ch >= 'A') and (ch <= 'Z') then
+            inc(freq[ord(ch) - ord('A')])
+        end
+        inc(i)
+    end
+end tally
+// end::hist[]
+
+// tag::histbody[]
+var
+    freq: array 26 of uint32
+    k, max: uint32
+
+begin
+    line := "the quick brown fox jumps over the lazy dog"
+    for k := 0 to len(freq) - 1 do freq[k] := 0 end
+    tally(@line, @freq)
+    max := 0
+    for k := 0 to len(freq) - 1 do
+        if freq[k] > max then max := freq[k] end
+    end
+    println(max)    // 4: 'o' occurs four times
+end Histogram
+// end::histbody[]

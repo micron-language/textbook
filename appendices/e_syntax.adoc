@@ -1,0 +1,145 @@
+[[app-e]]
+[appendix]
+=== Syntax Summary
+
+The complete syntax of Micron in EBNF, reproduced from the language
+specification <<R9>>, which remains the authoritative source.
+Alternatives are separated by `|`, brackets `[ ]` mean optionality and
+braces `{ }` repetition.
+
+....
+ident  = ( letter | '_' ) { letter | digit | '_' }
+letter = 'A' ... 'Z' | 'a' ... 'z'
+digit  = '0' ... '9'
+number   = integer | real
+integer  = (digit {digit|'_'} ['O'|'B'] | digit {hexDigit|'_'} 'H')
+           ['U'|'U1'|'U2'|'U4'|'U8'|'I'|'I1'|'I2'|'I4'|'I8']
+real     = digit {digit|'_'} '.' {digit|'_'} [Exponent]
+Exponent = ('E' | 'D' | 'F' ) ['+' | '-'] digit {digit}
+hexDigit = digit | 'A' ... 'F'
+digit    = '0' ... '9'
+character = digit {hexDigit} ('X' | 'x')
+string = ''' {character} ''' | '"' {character} '"'
+qualident = [ident '.'] ident
+identdef  = ident ['*' | '-']
+ConstDeclaration = identdef '=' ConstExpression
+ConstExpression  = expression
+TypeDeclaration = identdef '=' type
+type            = NamedType | ArrayType | RecordType | PointerType | ProcedureType 
+                 | enumeration | ObjectType | InterfaceType
+NamedType       = qualident
+ArrayType  = ARRAY [ length ] OF type | '[' [ length ] ']' type
+length     = ConstExpression
+varlength  = expression
+RecordType = RECORD [FixedPart][VariantPart] END
+FixedPart = FieldList { [';'] FieldList}
+FieldList  = IdentList ':' type [ BITS integer ]
+             | '..' BITS integer
+             | INLINE identdef ':' type
+VariantPart = CASE ['|'] Variant ( { '|' Variant } | { Variant } )
+Variant     = [INLINE] identdef ':' type [';']
+IdentList  = identdef { [','] identdef }
+ObjectType = OBJECT ['(' BaseType ')'] { IdentList ':' type [ ';' ] } END
+BaseType = NamedType
+PointerType = ( POINTER TO | '^' ) type
+ProcedureType = PROCEDURE [FormalParameters]
+ProcedureType = ( PROCEDURE | PROC ) '(' ( POINTER | '^' ) ')' [FormalParameters]
+InterfaceType = INTERFACE {InterfaceProc} END
+InterfaceProc = [PROCEDURE | PROC] identdef [FormalParameters] [';']
+enumeration ::= '(' constEnum ')' 
+constEnum ::= ident [ '=' ConstExpression ] { [','] ident } 
+VariableDeclaration = IdentList ':' type
+designator = (qualident|constructor) {selector}
+selector   = '.' ident | '[' expression ']' | '^' | '(' qualident ')'
+ExpList    = expression {[','] expression}
+expression       = SimpleExpression [ relation SimpleExpression ]
+relation         = '=' | '#' | '<' | '\<=' | '>' | '>=' | IN
+SimpleExpression = ['+' | '-'] term { AddOperator term }
+AddOperator      = '+' | '-' | OR
+term             = factor {MulOperator factor}
+MulOperator      = '*' | '/' | DIV | MOD | '&' | AND
+literal          = number | string | hexstring | hexchar
+                   | NIL | TRUE | FALSE | set
+factor           = literal | designator [ActualParameters]
+		         | '(' expression ')' | ('~'|NOT) factor
+		         | '@' designator
+ActualParameters = '(' [ ExpList ] ')'
+set              = '{' [ element {[','] element} ] '}'
+element          = expression ['..' expression]
+FunctionCall           = designator ActualParameters
+constructor = [NamedType] '{' [ component {[','] component} ] '}'
+component = ident ':' expression
+				| '[' ConstExpression ']' ':' expression
+				| expression ['..' expression]
+hexstring = '$' {hexDigit} '$'
+statement = [ assignment | ProcedureCall | IfStatement
+            | CaseStatement | LoopStatement
+            | ExitStatement | GotoStatement | gotoLabel 
+		    | ReturnStatement | RepeatStatement | ForStatement ]
+StatementSequence = statement { [";"] statement} 
+assignment = designator ':=' expression
+ProcedureCall = designator [ ActualParameters ]
+IfStatement    = IF expression THEN StatementSequence
+		      {ElsifStatement} [ElseStatement] END
+ElsifStatement = ELSIF expression THEN StatementSequence
+ElseStatement  = ELSE StatementSequence
+CaseStatement = CASE expression OF ['|'] Case { '|' Case }
+		     [ ELSE StatementSequence ] END
+Case          = [ CaseLabelList ':' StatementSequence ]
+CaseLabelList = LabelRange { [','] LabelRange }
+LabelRange    = label [ '..' label ]
+label         = ConstExpression
+WhileStatement = WHILE expression DO StatementSequence END
+RepeatStatement = REPEAT StatementSequence UNTIL expression
+ForStatement = FOR ident ':=' expression TO expression
+		      [BY ConstExpression]
+			  DO StatementSequence END
+LoopStatement = LOOP StatementSequence END
+ExitStatement = EXIT
+ReturnStatement = RETURN [ expression ]
+ExitStatement   = EXIT
+GotoStatement = 'GOTO' ident
+gotoLabel = ident ':'
+ProcedureDeclaration = ProcedureHeading ( [ INLINE | INVAR ] [';'] ProcedureBody 
+                                        | [';'] EXTERN ['C' [string] | string]  ) 
+                       | ForwardDeclaration
+ProcedureBody        = DeclarationSequence BEGIN StatementSequence 
+                       [FINALLY StatementSequence] END [ident '.'] ident
+DeclarationSequence  = { CONST { ConstDeclaration [';'] }
+            | TYPE { TypeDeclaration [';']
+              | VAR { VariableDeclaration [';'] }
+            | ProcedureDeclaration [';'] }
+FormalParameters = '(' [ FPSection { [';'] FPSection } ] ')'
+                   [ ':' ReturnType ]
+ReturnType       = [ POINTER TO | '^' ] NamedType
+FPSection        = [CONST] ident { [','] ident } ':' FormalType
+FormalType       = type
+ProcedureHeading = ( PROCEDURE | PROC ) [Receiver] identdef [ FormalParameters ]
+ForwardDeclaration = ( PROCEDURE | PROC ) '^' [Receiver] identdef [ FormalParameters ]
+Receiver = '(' ReceiverParam ':' ReceiverType ')' | ReceiverType '.'
+ReceiverParam = ident
+ReceiverType = ident
+module     = MODULE ident [ MetaParams ] [ ModuleAttributes ] [';']
+             { ImportList | WhereDecls | DeclarationSequence }
+		    [ BEGIN StatementSequence [FINALLY StatementSequence] ] 
+             END ident ['.']
+ModuleAttributes ::= '[' Attribute { [','] Attribute } ']' 
+Attribute ::= ident [ '=' ConstExpression ]
+ImportList = IMPORT import { [','] import } [';']
+import     = [ ident ':=' ] ImportPath ident [ MetaActuals ]
+ImportPath = { ident '.' }
+MetaParams       = '(' MetaSection { [';'] MetaSection } ')'
+MetaSection      = ['CONST' | 'TYPE'] ident { [','] ident } [ ':' NamedType ]
+WhereDecls       = WHERE { WhereDeclaration [';'] }
+WhereDeclaration = ident ':' type
+MetaActuals      = '(' ConstExpression { [','] ConstExpression } ')'
+directive = '<*' ident ( '+' | '-' ) '*>'
+directive  = '<*' [ scIf | scElsif | scElse | scEnd ] '*>'
+scIf       = IF scExpr THEN
+scElsif    = ELSIF condition THEN
+scElse     = ELSE
+scEnd      = END
+condition  = scTerm { OR scTerm }
+scTerm     = scFactor {'&' scFactor}
+scFactor   = ident | '(' condition ')' | '~' scFactor
+....

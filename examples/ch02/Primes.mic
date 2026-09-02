@@ -1,0 +1,34 @@
+// tag::module[]
+module Primes
+
+const
+    N = 50
+
+var
+    sieve: array N of bool
+    i, k, count: integer
+
+    procedure clear()
+    var i: integer
+    begin
+        for i := 0 to N-1 do sieve[i] := false end
+    end clear
+
+begin
+    clear()
+    count := 0
+    for i := 2 to N-1 do
+        if ~sieve[i] then
+            inc(count)
+            print(i); print(" ")
+            k := i + i
+            while k < N do
+                sieve[k] := true
+                k := k + i
+            end
+        end
+    end
+    println("")
+    print("primes below "); print(N); print(": "); println(count)
+end Primes
+// end::module[]

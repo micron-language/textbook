@@ -1,0 +1,186 @@
+[[ch02]]
+=== A Tour of Micron
+
+This chapter shows a complete Micron program, runs it, and walks through what the reader sees,
+in the manner of a guided tour: everything is shown once and explained briefly,
+and the details follow in later chapters.
+A reader who knows C, Pascal or Go should be able to read the programs of this chapter fluently thereafter.
+
+==== A first program
+
+The following module computes the prime numbers below 50 with the sieve of Eratosthenes.
+
+[source]
+----
+include::../examples/ch02/Primes.mic[tag=module]
+----
+
+Stored in a file `Primes.mic`, the program is run with the interpreter that is built into `micc`:
+
+----
+> micc --run Primes.mic
+2 3 5 7 11 13 17 19 23 29 31 37 41 43 47
+primes below 50: 15
+----
+
+The tour begins at the top.
+
+*Modules.* A Micron compilation unit is a module.
+It opens with `module` and its name, and closes with `end` and the same name; the compiler checks the match.
+Everything in between belongs to the module: constants, types, variables, procedures,
+and finally an optional statement sequence between `begin` and `end`, the module body,
+which is executed when the module is loaded.
+There is no distinguished `main` function; the body of the main module is the program, 
+and the main module is usually the module (or set of modules) on which no other modules depend.
+C programmers may read a module as the disciplined version of a translation unit: it has a name,
+its interface is checked, and its initialization is ordered.
+Pascal and Oberon programmers are at home, with one visible difference treated next.
+
+*No semicolons, no capitals.* Micron inherits Oberon's syntax but relaxes two of its formalities.
+Statement separators are optional; statements are separated by white space,
+and semicolons may still be written where two statements share a line (as in `print(i); print(" ")` above).
+Reserved words and predeclared identifiers are recognized in all lower case or all upper case; `module` and `MODULE`,
+`integer` and `INTEGER` are the same word.
+This book writes lower case, which is easier on eyes trained by C, Pascal or Go;
+the Micron System sources of <<part3>> do the same.
+
+*Declarations.* The sections `const`, `type` (none in this example) and `var` declare names before use,
+as in the whole Pascal family.
+`N = 50` declares a compile-time constant; the array length `array N of bool` must be such a constant.
+Note the declared procedure `clear` nested among the declarations:
+procedures may be declared wherever declarations are allowed,
+including inside other procedures (but a nested procedure cannot access the local variables of its enclosing procedure;
+what looks like a closure in other languages is not one in Micron, see <<ch05>>).
+
+*Statements.* The control statements are those of Oberon: `if`, `while`, `repeat`, `for`, `case`, `loop`,
+each closed with an explicit `end` rather than braces or `begin`/`end` pairs.
+`~` is boolean negation (`not` is also accepted), `&` is conjunction (`and` is also accepted).
+`inc(count)` is a predeclared procedure equivalent to `count := count + 1`.
+Assignment is `:=` and equality is `=`; the C programmer's `=`/`==` trap does not exist.
+
+*Input and output.* `print` and `println` are predeclared procedures that accept a value of any basic type or a string;
+they exist so that programs like this one need no library.
+Real programs use library modules, such as the `Out` module of the Oakwood guidelines <<TBD>> that ships with the compiler,
+or the Files and Texts modules of <<part3>>.
+
+==== Two modules
+
+The interesting properties of a module system appear only with a second module.
+The following module exports a procedure:
+
+[source]
+----
+include::../examples/ch02/Sorter.mic[tag=module]
+----
+
+and a main module imports and uses it:
+
+[source]
+----
+include::../examples/ch02/TourMain.mic[tag=module]
+----
+
+----
+> micc --run TourMain.mic
+1 2 3 4 5 7 8 9
+----
+
+The command names only the main module; the compiler finds `Sorter.mic` by its module name, compiles it first,
+and reports both modules.
+There are no header files and no makefile: the import list is the dependency graph.
+
+The asterisk in `procedure sort*` is the export mark.
+Only marked identifiers are visible to importing modules; everything else is private.
+A second mark, `-`, exports read-only,
+which is used extensively in the Micron System to publish state that only its owning module may change.
+The importing module refers to the procedure as `Sorter.sort`; imported names are always qualified,
+so the reader of `TourMain` sees at every call which module serves it.
+
+The parameter list of `sort` shows three things worth noting on first contact.
+First, `^[]integer` is a pointer to an open array of integers; the caller passes `@a`, the address of its array.
+Micron has no VAR parameters, so passing by reference is always visible as a pointer at the call site.
+Second, the open array `[]integer` (also written `array of integer`) has no intrinsic length;
+the length travels as a separate parameter, as it would in C.
+The predeclared function `len` yields the length of a fixed-size array.
+Third, `len` returns an unsigned value, and the parameter `n` is declared `uint32` to match:
+Micron does not mix signed and unsigned operands implicitly, a discipline that <<ch03>> treats in detail.
+
+==== The toolchain in one page
+
+The compiler `micc` covers the whole workflow of this book with four modes:
+
+----
+micc --check Main.mic          # parse and typecheck only
+micc --run   Main.mic          # compile to MIL and interpret
+micc --run   project.micpro    # the same, for a project file
+micc --target rv32 -o Main ... # cross-compile and link an executable
+----
+
+`--run` uses no external tools and is how all examples of Parts I and II are executed.
+A `.micpro` project file lists source files and options for larger programs;
+the "Are We Fast Yet?" suite is run this way.
+Cross-compilation produces a statically linked ELF executable for a real instruction set (RISC-V 32-bit, ARMv7,
+or x86); <<part3>> uses it to build an entire operating system with one command:
+
+----
+micc --target rv32 -g --base 0 --runtime MIC+.mil -I . -o Main Main.mic
+rv32vm --elf --ram 4 --disk disk.img Main
+----
+
+The first command compiles and links the 27 modules of the Micron System;
+the second boots the result on an emulated RISC-V machine.
+That this fits in two lines is not a demonstration trick but a design property of the language: no separate assembler,
+no linker script, no C runtime.
+The reader will find the complete instructions in <<app-a>> and the system itself in <<part3>>.
+
+==== Why there is no extra optimization
+
+In its current incarnation, `micc` performs no optimization passes beyond straightforward code generation.
+It is a design decision, in the tradition of Wirth's compilers, none of which ever contained an optimizer,
+and it deserves the same explanation as any other decision in this book.
+
+For programs in the style this book teaches, 
+the measured difference between unoptimized and fully optimized translation is modest.
+Comparing e.g. `-O0` with `-O2` for C compilers on realistic benchmark suites yields a typical factor between two and three on average
+footnote:[Averaged so that no single benchmark dominates; single benchmarks, and microbenchmarks in particular,
+scatter widely in both directions and prove nothing on their own; the suite average is the number that predicts real performance.];
+published measurements on standard suites report averages in the same range (see <<TBD>>).
+Over the same decades in which optimizers grew to this factor,
+processors became faster by a factor of sixty to a hundred for the identical unoptimized code:
+a program whose performance was judged acceptable on a workstation of the early nineties
+runs nearly two orders of magnitude faster today before any optimizer has touched it.
+
+A state-of-the-art optimizing infrastructure (such as <<TBD>>) comprises millions of lines of code,
+maintained by corporations. The costs are not only lines and work: optimizing compilers are big and slow,
+and their output no longer corresponds to the source under a debugger.
+A compiler small enough to be read, fast enough to be rerun without thought,
+and literal enough to be trusted is worth more to a systems programmer than the last factor of two.
+Where that factor genuinely matters, the remedy of first resort is a better algorithm,
+and that is something no optimizer supplies.
+
+The Micron System of <<part3>> is the standing test of this position:
+an entire operating system with editor, compiler and graphics, compiled without an optimizer,
+responsive on an emulated machine.
+Wirth made the same wager for thirty years and never lost it.
+
+==== Language levels at first sight
+
+One line in <<part3>>'s sources has no counterpart in the examples above.
+The Kernel module of the Micron System begins:
+
+----
+module Kernel [level=1]
+----
+
+The attribute declares the module's _language level_.
+Levels stratify the language by the runtime support a feature needs:
+level 0 code needs neither stack nor heap and is suitable for boot code and interrupt handlers;
+level 1 adds ordinary procedures and the stack; level 2 adds interface types;
+level 3 adds the heap with explicit `new` and `dispose`; level 4 adds object types with dynamic dispatch;
+level 5 adds garbage collection.
+A module may only import modules of the same or a lower level,
+so the property "this code does not allocate" is not a comment but a checked invariant.
+A module without the attribute, like the examples of this chapter, defaults to level 3;
+disciplined projects declare their levels, and the Micron System does so throughout.
+The levels organize <<part2>> of this book:
+each chapter that introduces a feature states the level at which the feature becomes available.

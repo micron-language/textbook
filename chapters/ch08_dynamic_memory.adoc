@@ -1,0 +1,152 @@
+[[ch08]]
+=== Dynamic Memory
+
+Everything up to this point ran without a heap.
+Level 3 introduces it, and with it the pointers whose targets outlive the procedure that created them.
+This chapter covers explicit allocation and deallocation;
+garbage collection is a separate decision and a separate chapter TBD.
+
+==== Three kinds of storage
+
+Before the heap arrives it is worth drawing the whole picture,
+because a Micron variable lives in one of three places,
+and the place determines its lifetime:
+
+.The three storage classes and their lifetimes (the Micron System's arrangement)
+----
+low addresses
++--------------------+
+| code               |
++--------------------+
+| module variables   |  exist from load to program end (static)
++--------------------+
+|         ^          |
+|         |          |  grows downward
+| stack              |  each frame from call to return (automatic)
++--------------------+
+| heap               |  each block from new(p) to dispose(p)
+|         |          |
+|         v          |  grows upward
++--------------------+
+high addresses
+----
+
+Module variables are allocated once, when the program is loaded,
+and exist until it terminates; their addresses are fixed.
+Local variables and parameters live in the _stack frame_ of their procedure:
+the frame is created by the call and vanishes with the return,
+which is why a pointer to a local variable must never survive the procedure,
+a rule the language states but, at these levels, cannot enforce.
+Both classes share one property: their size and number are determined by the program text.
+A program restricted to them, which is any program below level 3,
+can be proven to run in bounded memory,
+which is why embedded firmware often stops there deliberately.
+
+What the two static classes cannot express is a data structure
+whose size depends on the _input_: a list of unknown length,
+a tree grown from a parsed file, a buffer sized at run time.
+For these the third class exists.
+The _heap_ is storage that the program requests and releases
+explicitly, block by block, in any order,
+and a heap block's lifetime is bounded by no procedure and no module:
+it begins with `new` and ends with `dispose`, wherever they occur.
+That freedom is the point, and it is also the cost,
+because the compiler can no longer pair allocation and release for you.
+The exact arrangement of the classes in the address space is the target platform's business
+(the picture above shows the map of the Micron System, inherited from Project Oberon <<R2>>,
+where the stack grows down toward the module data and the heap grows up above it);
+the lifetime rules are the language's.
+
+==== new and dispose
+
+If `p` is a pointer to a type T, the predeclared procedure `new(p)` allocates a variable of type T on the heap
+and assigns its address to `p`.
+If T is an open array (and only then), the length is passed as a second argument: `new(p, n)`.
+Memory obtained with `new` is uninitialized, like every other variable in Micron;
+`newinit(p)` and `newinit(p, n)` allocate and set the storage to its `default` value where that is worth its cost.
+When the storage is no longer needed, `dispose(p)` frees it.
+All three are available from level 3.
+
+The classical example is the linked list:
+
+[source]
+----
+include::../examples/ch08/Lists.mic[tag=list]
+----
+
+The `ItemDesc` record refers to itself through the pointer type `Item`,
+declared before it in the same type section;
+the deferred resolution of pointer base types makes the forward reference legal.
+The procedures take `^Item` where they modify the head of the list, and `Item` where they only walk it,
+so the signature states the effect.
+
+A picture of the resulting store shows what the declarations mean.
+After three calls of `prepend`, one module variable of pointer type
+refers to the first of three records, each allocated by its own `new`
+and each holding the address of the next:
+
+.A linked list: one static pointer, three heap records
+----
+module variable        heap
++------+       +-----------+      +-----------+      +-----------+
+| head | ----> | value  3  |  +-> | value  2  |  +-> | value  1  |
++------+       | next   ---+--+   | next   ---+--+   | next  nil |
+               +-----------+      +-----------+      +-----------+
+----
+
+Nothing in the picture is contiguous: the three records may lie anywhere in the heap,
+in any order, and only the `next` fields hold the structure together.
+This is the fundamental trade against the array:
+an array buys direct access by index with one block of fixed size,
+the list buys insertion and removal in constant time
+with one pointer per element and no index at all.
+Removing the middle record is one pointer assignment plus a `dispose`;
+removing the middle element of an array is a shift of everything
+behind it.
+
+A dynamically allocated open array is, once more, a typed memory area and nothing else:
+
+[source]
+----
+include::../examples/ch08/Lists.mic[tag=openarray]
+----
+
+[source]
+----
+include::../examples/ch08/Lists.mic[tag=openarraybody]
+----
+
+The allocation knows the length, but the array does not store it;
+`fill` receives the length as a parameter, exactly as its C counterpart would.
+Programs that need self-describing buffers declare a record with a length field and the array behind it,
+and pay for the field visibly.
+
+==== Ownership without a collector
+
+C programmers know the discipline that explicit deallocation demands, and Micron does not pretend to remove it:
+whoever owns a heap value must dispose of it exactly once, and no one may use it afterwards.
+What the language contributes is a smaller attack surface.
+There is no pointer arithmetic by accident (only by explicit `ptroff` and pointer `inc`/`dec`),
+no silent conversion between pointers and integers, no cast needed to allocate,
+and the level system confines allocation to the modules that declare at least level 3.
+A driver at level 1 cannot leak memory, because it cannot allocate any;
+the reviewer knows this from the module heading, not from reading every line.
+
+The `finally` section of a procedure supports the discipline further:
+its statements run whenever the procedure body terminates, on the normal path and on early returns alike,
+so a procedure that allocates temporary storage can place the `dispose` once, next to the exit, instead of before
+every `return`.
+TBD
+
+Fragmentation and allocation strategy belong to the runtime rather than the language.
+The interpreter uses the host allocator; TBD.
+The language only defines the contract: `new`, `newinit` and `dispose` can be routed to a custom
+implementation, so a freestanding program can choose its own allocator by implementing three procedures.
+
+==== newgc, a preview
+
+Level 5 adds `newgc`, which allocates under a garbage collector; such storage is never disposed explicitly.
+The two allocation worlds do not mix on a single pointer:
+what was allocated with `new` is freed with `dispose`, what was allocated with `newgc` is reclaimed by the collector.
+The Micron System runs its user-facing data structures, texts and viewers under the collector
+while its kernel stays at the explicit levels; TBD.

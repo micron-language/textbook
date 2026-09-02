@@ -1,0 +1,100 @@
+// LeanDoc 2026-08-19
+
+// This and the referenced files may be used under the terms of the GNU General Public
+// License (GPL) versions 2.0 or 3.0 as published by the Free Software
+// Foundation, see http://www.gnu.org/copyleft/gpl.html for more information
+
+= Programming in Micron
+Rochus Keller
+v0.1, 2026-09-02 
+:toc:
+:toclevels: 2
+:numbered:
+:xrefstyle: short
+
+include::chapters/preface.adoc[]
+
+[[part1]]
+[part]
+== The Language and Its Reasons
+
+This part explains why the Micron programming language exists, what using it looks like,
+and it lays down the vocabulary the rest of the book depends on.
+TBD
+
+[[ch01]]
+=== Why Micron?
+TBD
+
+include::chapters/ch02_tour.adoc[]
+include::chapters/ch03_types_values.adoc[]
+
+[[ch04]]
+=== Coming from other languages
+
+TBD
+
+[[part2]]
+[part]
+== The Language in Depth
+
+This part covers the language feature by feature.
+TBD
+
+include::chapters/ch05_program_structure.adoc[]
+include::chapters/ch06_structured_types.adoc[]
+
+[[ch07]]
+=== Abstraction without Object-Orientation
+TBD
+
+include::chapters/ch08_dynamic_memory.adoc[]
+
+[[ch09]]
+=== Object-Oriented Programming
+TBD
+
+include::chapters/ch10_generic_modules.adoc[]
+
+
+[[part3]]
+[part]
+== Systems Programming — The Micron System
+
+Presen the Micron System, a port of Niklaus Wirth and Jürg Gutknecht's Project Oberon (edition 2013) to Micron.
+
+TBD
+
+[[part4]]
+[part]
+== Appendices
+
+TBD
+
+include::appendices/a_tools.adoc[]
+
+[[app-b]]
+[appendix]
+=== Micron System Design Notes
+TBD
+
+[[app-c]]
+[appendix]
+=== RISC5 vs. RV32
+TBD
+
+[[app-d]]
+[appendix]
+=== Reading MIL
+TBD
+
+include::appendices/e_syntax.adoc[]
+include::appendices/f_predeclared.adoc[]
+include::appendices/g_language_levels.adoc[]
+
+[[app-h]]
+[appendix]
+=== Micron for C and Pascal Programmers
+TBD
+
+include::appendices/i_bibliography.adoc[]

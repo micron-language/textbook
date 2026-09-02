@@ -1,0 +1,64 @@
+[[preface]]
+== Preface
+
+This book describes Micron, a systems programming language in the school of Niklaus Wirth, and shows how to use it:
+for ordinary programs, for libraries, and for an operating system that the reader can build and boot with one command.
+
+Micron is not my first language design, and it did not appear out of nowhere.
+It is the result of a long journey, and the journey is perhaps worth telling.
+
+I studied electrical engineering at ETH Zürich from mid eighties to early nineties,
+with a specialization in information technology and computer engineering.
+Wirth was famous and admired among the students, and I took the chance to attend his lectures in my fifth and sixth semester,
+including the compiler lectures, alongside a hundered of other students.
+We were taught Modula-2 on the Macintosh, and the compilers we studied were written in Modula-2.
+Oberon was developed while I was there, and Wirth might have mentioned it, but it took some more years until I encountered it.
+
+My first close contact with Oberon came around 2000, during my doctorate,
+a thesis in molecular biology and biophysics on the NMR structure determination of biological macromolecules.
+An early idea was to design a programming language extending Oberon to implement the tools required by the molecular biologists,
+but after initial prototypes, that endeavor turned out to be too much for the project, which even so took more than five years to complete.
+I postponed the language for twenty years and implemented my scientific software in C++ with Qt instead, and with Lua as a scripting language.
+Even while pursuing my doctoral studies, I took the chance to take lectures at the computer science department.
+I was lucky that Bertrand Meyer arrived as Wirth's successor during those years,
+and I took all his lectures, studied the world of Eiffel, and attended the guest lectures of people like Adele Goldberg,
+Jean-Raymond Abrial, Dines Bjørner and Ivar Jacobson whom he invited.
+
+The postponed idea did not go away. When I finally returned to it, I did not start with Micron.
+I first built Oberon+ <<R1>>, a modernized and unified Oberon, in order to understand,
+by implementing it and by porting real systems to it, what Wirth's design actually gives and where it fails.
+The systems ported to Oberon+ included the 2013 Project Oberon System <<R2>> and different versions of Oberon System 3,
+and I also spent significant time with the Blackbox Framework and AOS/Bluebottle including the corresponding language versions.
+I then explored the opposite direction with Luon, a higher-level language for managed application programming, 
+with which I implemented yet another version of the Project Oberon System, and a Smalltalk-80 virtual machine <<R3>>.
+I also implemented parsers and analysis tools for Lisa Pascal, FreePascal, Simula 67, Algol 60, Mesa and Cedar, 
+i.e. a whole bunch of languages along the Algol/Wirth lineage.
+Micron is the systems programming conclusion of these experiments.
+It is what remained when the lessons of Oberon+, the ideas that proved themselves in Luon and the other languages studied,
+together with thirty years of using C, C++ and their successors, including many embedded system, 
+were applied to the question that Oberon left open: 
+what should a small, safe and honest language for programming machines look like?
+
+The answer, in one sentence: Oberon's clarity and leanness with the reach of C.
+The rest of this book is the long version.
+
+=== How to read this book
+
+The book assumes that you already program, whether in C, in Pascal or one of its descendants, in Go, in Oberon,
+or in a comparable language.
+It teaches Micron, not programming.
+
+<<part1>> explains what Micron is and why it exists, and introduces the notation and the type system.
+<<part2>> covers the language feature by feature, TBD.
+<<part3>> walks through the Micron System, TBD.
+The appendices contain everything needed to reproduce the examples, and reference material.
+
+=== Examples
+
+As I write this, I have already migrated a lot of decently large and complex applications and systems to Micron,
+including the obligatory Project Oberon System (both hosted and native on Risc-V), the Smalltalk-80 VM, 
+the original P4 Pascal compiler <<R4>>, different versions of the Are-we-fast-yet benchmark suite <<R5>>, 
+the Scheme 9 virtual machine <<R6>>. 
+
+TBD
+

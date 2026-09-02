@@ -1,0 +1,19 @@
+// A client module of Buffers.
+module UseBuffers [level = 1]
+
+// tag::client[]
+import Buffers
+
+var
+    ch: char
+    ok: boolean
+
+begin
+    ok := Buffers.Put('h') ok := Buffers.Put('i')
+    println(Buffers.count)          // 2: reading is allowed
+    // Buffers.count := 0           // error: read-only export
+    // Buffers.buf[0] := 'x'        // error: buf is not exported
+    while Buffers.Get(@ch) do print(ch) end
+    println("")                     // hi
+end UseBuffers
+// end::client[]

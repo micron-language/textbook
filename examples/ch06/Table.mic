@@ -1,0 +1,47 @@
+// Arrays of records: a small table, sorted by one field.
+module Table
+
+// tag::type[]
+const N = 4
+
+type
+    Entry = record
+        name: array 12 of char
+        height: integer     // meters
+    end
+
+var peaks: array N of Entry
+// end::type[]
+
+// tag::sort[]
+procedure sort(a: ^[]Entry; n: uint32)
+    var
+        i, j: uint32
+        t: Entry
+begin
+    for i := 1 to n - 1 do
+        t := a[i]                   // whole-record assignment
+        j := i
+        while (j > 0) and (a[j-1].height < t.height) do
+            a[j] := a[j-1]
+            dec(j)
+        end
+        a[j] := t
+    end
+end sort
+// end::sort[]
+
+// tag::body[]
+var k: uint32
+
+begin
+    peaks[0].name := "Everest"     peaks[0].height := 8848
+    peaks[1].name := "Kilimanjaro" peaks[1].height := 5895
+    peaks[2].name := "Mont Blanc"  peaks[2].height := 4808
+    peaks[3].name := "K2"          peaks[3].height := 8611
+    sort(@peaks, N)
+    for k := 0 to N - 1 do
+        print(peaks[k].height) print(" ") println(@peaks[k].name)
+    end
+end Table
+// end::body[]

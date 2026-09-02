@@ -1,0 +1,322 @@
+[[ch05]]
+=== Program Structure: Modules, Procedures, Statements
+
+<<ch02>> showed the shape of a Micron program in passing.
+This chapter treats it systematically: the module as compilation unit, the declaration of procedures,
+and the statements of the language.
+
+==== Modules
+
+Every language of the Algol line structures computation the same way:
+statements compose into procedures, procedures into programs.
+What Modula-2 added, and every Wirthian language since has kept,
+is one more level above the procedure: the module.
+Its purpose is different in kind from the procedure's.
+A procedure abstracts an _action_; a module draws a _boundary_,
+
+TBD
+
+A module is a collection of declarations of constants, types, variables and procedures,
+together with an optional statement sequence that assigns initial values to the variables.
+It is the unit of compilation, and it is the unit of information hiding:
+nothing declared inside a module is visible outside unless its declaration carries an export mark.
+
+----
+module M [level = 1]
+import Files, F := Fonts, lib.Util
+
+const ...
+type ...
+var ...
+procedure ...
+
+begin
+    // executed once, when the module is loaded
+end M
+----
+
+The import list names the modules whose exported identifiers M uses; an exported `x` of module `A` is written `A.x`,
+and the form `F := Fonts` introduces a shorter alias.
+An import may carry a path prefix such as `lib.Util`; how paths map to files is the compiler's business,
+not the language's.
+Cyclic imports are illegal.
+The statement sequence after `begin` is the module body; it runs when the module is loaded,
+after the bodies of all imported modules, so a module can rely on its imports being initialized.
+In a statically linked program such as the Micron System,
+loading simply means execution in import dependency order before the main program starts.
+
+The bracketed attribute after the module name declares properties of the whole module.
+The most important attribute is the language level, introduced in <<ch02>>:
+`[level = 1]` (or `[standard = 1]`) restricts the module to the features of level 1 and permits imports at
+levels 0 and 1 only.
+A second attribute, `visibility`, changes the default visibility of module-level declarations,
+which is useful for modules that export nearly everything.
+
+===== Export marks
+
+An identifier declared at module level may carry one of three marks: `*` exports it, `-` exports it read-only,
+and `~` (or no mark) keeps it private.
+Read-only export is a Micron inheritance from Oberon that C has no counterpart for:
+a module can publish a variable or a record field that clients may inspect but not assign,
+without writing accessor procedures.
+The fields of an exported record type are private by default and must be marked individually,
+so a module can export a type while keeping parts of its representation to itself.
+
+Pascal programmers will recognize the module as the unit that replaces both the `unit`
+interface/implementation split and the header file discipline of C.
+There is no separate interface text to maintain:
+the compiler extracts the exported interface from the marked declarations,
+and separate compilation rests on that extracted interface TBD.
+
+===== Clients and providers
+
+Decomposing a program into modules divides its programmers into two roles:
+the _provider_, who writes a module and carefully chooses what to export,
+and the _client_, who imports it and deals with the module through
+the exported names only.
+The set of exported declarations, seen from the client's side,
+is called the module's _interface_.
+A small example makes the two views concrete.
+The provider is a character queue of fixed capacity:
+
+[source]
+----
+include::../examples/ch05/Buffers.mic[tag=buffers]
+----
+
+The interface consists of `Put`, `Get` and the counter `count`;
+the array `buf` and the two indices remain invisible.
+The client sees exactly this and nothing more:
+
+[source]
+----
+include::../examples/ch05/UseBuffers.mic[tag=client]
+----
+
+The choice of exports is the design decision.
+Exporting `buf`, `in_` and `out` would let a client insert an element
+directly, and the first client that did so incorrectly would corrupt
+the queue for every other client, with the failure surfacing far from
+its cause.
+By exporting procedures only, the module _guarantees the integrity_
+of its data: no execution of any client, correct or buggy,
+can violate the queue invariant, because the only code that touches
+the representation is the code in this file.
+C offers this protection per file with `static`,
+but without a checked import mechanism on the other side;
+in Micron the compiler verifies both sides of the contract.
+
+The read-only mark refines the contract.
+`count` is information a client legitimately wants,
+and a `Count()` function procedure would be the classic answer;
+the `-` mark provides it for free while still preventing assignment,
+as the commented lines in the client show.
+A thin interface pays a second dividend besides safety:
+it is the module's documentation.
+If names are well chosen, the half dozen marked declarations state
+what the module does more reliably than any comment,
+and they are checked against the implementation on every compilation.
+
+The third dividend is _freedom of implementation_.
+Nothing in the interface of `Buffers` reveals that the representation
+is a circular array; a linked list, or a heap block of growing size,
+would present the identical interface.
+The provider may exchange the representation tomorrow,
+and no client needs to be edited, because no client can have
+depended on what it could never see.
+TBD
+
+===== Separate compilation and initialization order
+
+Modules are compiled separately, but not independently.
+The distinction, due to Modula-2, is worth spelling out for readers
+coming from C, where the compiler processes one translation unit
+at a time and takes declarations on faith:
+a mismatch between a header and its library surfaces, at best,
+at link time, and at worst at run time.
+When micc compiles a module, it reads the _actual interfaces_ of the
+imported modules, extracted from their sources by the compiler itself,
+and type-checks every use of an imported name against the real
+declaration.
+The faith is gone; a client compiled against yesterday's interface
+of a changed provider is rejected, not linked.
+
+Separate compilation dictates an order: a provider before its clients.
+The import graph therefore must be free of cycles,
+and the compiler rejects cyclic imports outright rather than
+attempting a resolution.
+The restriction bites occasionally, when two modules seem to need each
+other, but the cure is always the same and always an improvement:
+the declarations both sides depend on move into a third module
+below both, or one direction of the dependency is inverted
+with procedure variables TBD.
+A cycle-free import graph is also what makes the initialization rule
+of this chapter's first section well defined:
+module bodies run in import dependency order, providers first,
+so every module may rely on its imports being fully initialized,
+and the whole program starts in a defined state without any
+of the static-initialization-order accidents C++ programmers know.
+
+==== Procedures
+
+A procedure declaration consists of a heading and a body; the procedure name is repeated after `end`,
+a small redundancy that pays off in long files.
+Procedures whose heading specifies a result type are function procedures and are called inside expressions;
+every control path of a function procedure must return a value.
+All declarations inside a procedure are local, and locals have undefined values on entry, as module variables do.
+Procedures may be nested,
+and in contrast to traditional Oberon a local procedure may be assigned to a procedure variable.
+
+===== Parameters
+
+Micron has no VAR parameters.
+Where Oberon or Pascal would pass a variable by reference, a Micron procedure takes a pointer,
+and the caller applies the address operator:
+
+[source]
+----
+include::../examples/ch05/Structure.mic[tag=constparam]
+----
+
+The call site then reads `count(@text, 'b')`, and the reader sees at a glance that `text` might be affected.
+What Micron adds instead of VAR is `const`: a parameter marked `const` is read-only in the body,
+and the property is transitive, so the elements and fields reached through a const pointer are read-only too.
+This restores what C expresses with `const T*`, but checked without casts and holes.
+
+There are no variadic parameters.
+A variable number of arguments of one type is passed as a pointer to an array plus a count;
+heterogeneous argument lists, as in a formatted print,
+are passed as an array of pointers to `any` together with a format string.
+Both cost one line at the call site and remove an entire category of ABI complexity and run-time error from the language.
+
+The homogeneous case in full:
+
+[source]
+----
+include::../examples/ch05/Structure.mic[tag=sumarray]
+----
+
+The parameter is an open array (no length in the type), so the count travels beside it,
+and the same procedure serves arrays of any length.
+The caller fills an array of whatever size the call needs
+and passes its address together with its length:
+
+[source]
+----
+include::../examples/ch05/Structure.mic[tag=sumcall2]
+----
+
+An array constructor (see <<constructors>>) is used as an anonymous local variable
+(with the `@` operator), so we don't need an extra declaration.
+
+What C's `sum(4, 1, 7, 3, 9)` hides in varargs machinery, the ellipsis, the promotion rules,
+`va_list` and the unchecked agreement between count and arguments,
+Micron states as an ordinary array whose construction the reader can see
+and whose element type the compiler checks at every call.
+
+The heterogeneous case, formatted printing, works the same way with `pointer to any`,
+the type to which a pointer of any type is assignable.
+The format string names the type of each argument, and the procedure casts accordingly
+(a subset of the usual specifiers suffices to show the pattern; the rest follow the same scheme):
+
+[source]
+----
+include::../examples/ch05/Format.mic[tag=format]
+----
+
+The call site again builds the argument array with a constructor:
+
+[source]
+----
+include::../examples/ch05/Format.mic[tag=formatdecl]
+----
+
+[source]
+----
+include::../examples/ch05/Format.mic[tag=formatcall]
+----
+
+which prints `hello world: n = 42, c = x (100%)`.
+Where C's `printf` trusts the caller, the specifiers here are checked against
+an argument list whose construction is visible;
+a mismatch between specifier and argument remains possible,
+but it is confined to one small procedure whose cases can be read,
+rather than distributed over every variadic call in the program.
+
+A function may return records and arrays by value, which Oberon and Oberon-2 did not allow.
+Open arrays cannot be returned, since their length is not part of the type.
+
+===== Inline, invar, extern and forward
+
+Four markers can follow a procedure heading,
+and together they replace a surprising amount of C preprocessor and linker lore:
+
+_inline_ requests that the body be expanded at the call site; no call happens, and no stack frame is needed.
+Inline procedures cannot be recursive.
+At language level 0, where no stack exists yet, all procedures are implicitly inline; TBD.
+
+_invar_ (invariable) declares a procedure whose result depends only on its arguments:
+it may call only other invar procedures, and it cannot touch module variables.
+The reward is that the compiler can evaluate it at compile time,
+so an invar procedure may be used in constant declarations:
+
+[source]
+----
+include::../examples/ch05/Structure.mic[tag=invar]
+----
+
+----
+const c8 = cube(8)    // evaluated by the compiler
+----
+
+Where C programs compute tables with external scripts or preprocessor contortions,
+a Micron program writes an ordinary procedure and marks it invar. TBD
+
+_extern_ declares a procedure implemented elsewhere: in another Micron object file, or, with the form `extern C`,
+in a C library reached through the foreign function interface, optionally with the external name given as a string.
+This is the door to the outside world TBD.
+
+A _forward declaration_, marked with `^`, announces a procedure before its implementation,
+for the case of mutual recursion in a single-pass compilation:
+
+[source]
+----
+include::../examples/ch05/Structure.mic[tag=forward]
+----
+
+==== Statements
+
+The statement forms are those of the Oberon family, with a uniform bracketing:
+every structured statement is closed by `end`, and the dangling-else problem of C and Pascal does not exist.
+Statement separators are line ends; semicolons are optional.
+
+Assignment is `:=`, equality is `=`, inequality is `#`.
+The boolean operators `&` and `or` evaluate their second operand only if the first does not decide the result,
+exactly like `&&` and `||` in C.
+
+`if` takes any number of `elsif` arms and an optional `else`.
+`while` and `repeat ... until` are the guarded loops.
+`for` iterates an integer or enumeration control variable from a first to a last value,
+with an optional constant `by` step; a downward loop needs an explicit negative step.
+`loop` with `exit` expresses repetitions with exits in the middle or at several points:
+
+[source]
+----
+include::../examples/ch05/Structure.mic[tag=caseloop]
+----
+
+The `case` statement selects on an integer, enumeration or character value; labels are constants or ranges,
+may not overlap, and if no label matches and there is no `else`, the program aborts,
+which is the correct default for state machines that are supposed to be exhaustive.
+A second form of `case` selects on the dynamic type of an object pointer TBD.
+
+Finally, Micron has `goto`,
+with labels declared in the statement sequence and jumps forbidden into structured statements.
+It was not added out of conviction.
+It was added because translated C code is full of it,
+and mechanical migration of C programs is a stated goal of the language.
+New Micron code should not need it, and the Micron System does not contain a single one.
+
+The `return` statement terminates a procedure, with an expression when the procedure is a function.
+In proper procedures the end of the body implies the return, so an explicit `return` marks an exceptional early exit.
+Return statements are illegal in module bodies.

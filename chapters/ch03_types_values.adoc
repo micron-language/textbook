@@ -1,0 +1,202 @@
+[[ch03]]
+=== Notation, Types and Values
+
+This chapter describes the lexical notation of Micron and its basic types,
+with emphasis on the part of the design that most visibly separates Micron from its ancestors:
+explicit signed and unsigned integer types, and the discipline that governs their combination and conversion.
+Structured types follow in <<ch06>>.
+
+==== Notation
+
+Micron source text consists of identifiers, reserved words, literals, operators and delimiters, and comments.
+Identifiers are sequences of letters, digits and underscores beginning with a letter or underscore,
+and they are case sensitive.
+Reserved words and predeclared identifiers are the exception:
+each exists in a fully lower-case and a fully upper-case form with identical meaning, so `begin` and `BEGIN`,
+`integer` and `INTEGER` are interchangeable.
+Mixed case is not recognized.
+This book writes lower case throughout.
+
+Comments come in two forms: `//` to the end of the line, and `(* ... *)`, which may be nested.
+Statement separators are optional; white space separates statements,
+and a semicolon may be used to put several statements on one line.
+
+==== Number literals
+
+An integer literal is decimal by default; the suffixes `H`, `O` and `B` select hexadecimal,
+octal and binary representation.
+A hexadecimal literal must begin with a digit, so the byte value 255 is written `0ffh`.
+Digits may be interspersed with underscores for readability:
+
+----
+1234
+0ffh            // 255
+1010b           // 10
+1_000_000
+----
+
+An unsuffixed integer literal has no fixed type.
+Its type is _universal integer_, and the concrete type is determined from the context in which the literal is used:
+in `u + 1` with `u: uint32`, the literal becomes a `uint32`; in `s + 1` with `s: int32`, an `int32`.
+Where the context is not sufficient, a type suffix fixes the type explicitly: `100u1` is a `uint8`, `100i8` an `int64`,
+and the width-free suffixes `u` and `i` select the smallest unsigned or signed type that holds the value.
+
+A real literal contains a decimal point with at least one digit before it, and optionally a scale factor:
+`E` for _times ten to the power of_,
+with `F` forcing type `flt32` and `D` forcing `flt64` (the traditional names `real` and `longreal` are synonyms, see below):
+
+----
+4.567e8
+0.577D-6
+----
+
+A character literal is written as the ordinal number of the character in hexadecimal notation followed by `X`,
+for example `0dx` for carriage return; characters are 8-bit Latin-1.
+A string literal is enclosed in single or double quotes and must not span lines;
+a string of length 1 is interchangeable with a character literal.
+String literals can be concatenated with `+`.
+Finally, a _hex string_ encodes raw bytes between dollar signs, two hex digits per byte, with white space ignored;
+the Micron System uses hex strings for icons, cursor shapes and font data:
+
+----
+const arrow = $0F0F 0060 0070 0038 001C 000E 0007 8003$
+----
+
+==== Basic types
+
+The basic types and their sizes are fixed by the language, not by the platform:
+
+[cols="2,1,3"]
+|===
+|Type (synonyms)        |Size |Values
+
+|`bool` (`boolean`)     |1 byte |`true`, `false`
+|`char`                 |1 byte |Latin-1 characters
+|`uint8` (`byte`, `u1`) |1 byte |0 .. 255
+|`int8` (`i1`)          |1 byte |-128 .. 127
+|`uint16` (`u2`) |2 bytes |0 .. 65535
+|`int16` (`shortint`, `i2`) |2 bytes |-32768 .. 32767
+|`uint32` (`u4`) |4 bytes |0 .. 4294967295
+|`int32` (`integer`, `i4`) |4 bytes |-2^31^ .. 2^31^-1
+|`uint64` (`u8`) |8 bytes |0 .. 2^64^-1
+|`int64` (`longint`, `i8`) |8 bytes |-2^63^ .. 2^63^-1
+|`flt32` (`real`, `r4`)   |4 bytes |IEEE 754 single precision
+|`flt64` (`longreal`, `r8`) |8 bytes |IEEE 754 double precision
+|`set`                    |4 bytes |sets of the integers 0 .. 31
+|===
+
+The traditional names (`integer`, `byte`, `real`, ...) make Oberon and Pascal sources read naturally;
+the systematic names (`int32`, `uint8`, `flt32`, ...) say exactly what they are, in the manner of C's `stdint.h`.
+Both name the same types; the choice is style.
+Signed integers use two's complement.
+Within each family the larger type _includes_ the smaller: `int64 >= int32 >= int16 >= int8`,
+likewise for the unsigned types and for the two floating point types.
+
+Two consequences of this table deserve emphasis for the C programmer.
+There is no platform-dependent `int`: `integer` is `int32` everywhere.
+And there is no implicit conversion between integers and floating point in either direction;
+`flt(i)` converts an integer to floating point, and `floor(x)` truncates a floating point value to an integer.
+
+==== Signed and unsigned
+
+Micron requires that the two operands of an arithmetic operator are both signed integers, both unsigned integers,
+or both floating point.
+A universal integer literal adapts itself to the other operand, so `u + 1` needs no annotation; but `u + s` with `u:
+uint32` and `s: int32` is an error, not a silent conversion.
+The same discipline applies to assignment: a `byte` value is not assignable to an `integer` variable,
+although every byte value is representable, because the types belong to different families.
+Modula-2 had this rule for CARDINAL and INTEGER; C abandoned it in favor of the "usual arithmetic conversions",
+whose interactions of rank,
+promotion and signedness are complicated enough that entire coding standards exist to avoid them.
+
+Since programs legitimately need to move values between the families, Micron provides explicit operations,
+distinguished by intent:
+
+- `val(T, x)` _converts the value_: the result is the value of `x`
+   represented in type `T`, with overflow or precision loss accepted where the value does not fit.
+- `cast(T, x)` _reinterprets the representation_: the bits of `x` read as a `T` of the same size.
+   `cast(int32, 0ffffffffh)` is -1.
+- `sigl(x)` converts an unsigned value to the next larger signed type,
+   which always preserves the value; the unary `+` or `-` applied to an unsigned operand is a shortcut for it.
+   `sigc(x)` and `usig(x)` reinterpret between signed and unsigned of the same width,
+   as shortcuts for the corresponding `cast`.
+
+The following excerpt from this chapter's example module shows the discipline in practice:
+
+[source]
+----
+include::../examples/ch03/TypesDemo.mic[tag=signedbody]
+----
+
+The distinction between `val` and `cast` makes visible in the source what C hides in one cast syntax:
+whether the program converts a value to another type or reinterprets an unchanged bit representation as that type.
+
+==== Division
+
+`div` and `mod` truncate toward zero,
+like the division instructions of common processors and the `/` and `%` operators of C and Go:
+`(-7) div 2` is -3 and `(-7) mod 2` is -1.
+Oberon and Pascal define floor division instead, where `(-7) DIV 2` is -4 and the remainder is never negative.
+Where the Oberon semantics is genuinely wanted, the predeclared functions `obdiv` and `obmod` provide it:
+
+[source]
+----
+include::../examples/ch03/TypesDemo.mic[tag=divmodbody]
+----
+
+Arithmetic is not overflow-checked; the result of an overflowing operation is truncated to the width of its type.
+
+==== Bit operations
+
+Bit manipulation is provided by predeclared functions rather than operators: `band`, `bor`, `bxor`,
+`bnot` for the bitwise connectives, `shl` and `shr` for logical shifts, `asr` for the arithmetic shift right.
+Their names keep bit twiddling recognizable at a glance,
+which matters in systems code where logical `and` and bitwise `band` may appear in the same expression.
+
+TBD
+
+==== Sets
+
+The type `set` holds a set of the integers 0 to 31, represented as a machine word.
+Set constructors list elements and ranges in braces; `+`, `-`, `*` and `/` denote union, difference,
+intersection and symmetric difference; `in` tests membership.
+`ord(s)` yields the word as an unsigned number, and `bset(x)` the set corresponding to a number:
+
+[source]
+----
+include::../examples/ch03/TypesDemo.mic[tag=setsbody]
+----
+
+Sets are Wirth's alternative to C's flag words, with the compiler checking element ranges;
+the Micron System uses them for everything from sector maps to key states.
+
+==== Enumerations
+
+An enumeration declares a type by listing its values:
+
+----
+type Color = (red, green, blue)
+----
+
+The values are ordered constants of a distinct type, not integers: a `Color` cannot be added to anything,
+and `ord` must be used to obtain the ordinal where one is needed.
+Oberon dropped enumerations; Micron restores them,
+since a systems language without enumerations pushes programmers to integer constants and loses the type
+checking exactly where state machines and device modes would profit from it.
+
+==== Constants and variables
+
+A constant declaration binds an identifier to a compile-time expression.
+Constant expressions are evaluated by the compiler, using the same arithmetic rules as at run time;
+if all operands are unsuffixed literals,
+the constant is itself of universal integer type and adapts to its use sites like a literal.
+
+Variables are declared in `var` sections with name and type.
+The initial value of a variable is _undefined_, at module level as well as locally;
+Micron does not zero memory behind the program's back.
+Where a defined initial value is wanted, the program assigns it, or uses `default(T)`,
+which yields the zero-like value of any type.
+This is a deliberate difference from Go and from managed languages:
+implicit zeroing costs time exactly where systems code can least afford it,
+and it hides missing initializations instead of exposing them.
+Level 5 is the exception: where a garbage collector scans memory, pointers are automatically NIL, as <<ch08>> explains.

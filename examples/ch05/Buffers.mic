@@ -1,0 +1,31 @@
+// A provider module: a fixed-capacity queue of characters.
+module Buffers [level = 1]
+
+// tag::buffers[]
+const Cap = 64
+
+var
+    count-: uint32              // read-only for clients
+    buf: array Cap of char
+    in_, out: uint32
+
+procedure Put*(ch: char): boolean
+begin
+    if count = Cap then return false end
+    buf[in_] := ch in_ := (in_ + 1) mod Cap
+    inc(count)
+    return true
+end Put
+
+procedure Get*(ch: ^char): boolean
+begin
+    if count = 0 then return false end
+    ch^ := buf[out] out := (out + 1) mod Cap
+    dec(count)
+    return true
+end Get
+
+begin
+    count := 0 in_ := 0 out := 0
+end Buffers
+// end::buffers[]

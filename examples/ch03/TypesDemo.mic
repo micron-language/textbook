@@ -1,0 +1,47 @@
+module TypesDemo
+
+// tag::divmod[]
+var x, y: integer
+// end::divmod[]
+
+// tag::signed[]
+var
+    u: uint32
+    s: int32
+    b: byte
+// end::signed[]
+
+// tag::sets[]
+var
+    caps: set
+// end::sets[]
+
+begin
+    // tag::divmodbody[]
+    x := -7; y := 2
+    println(x div y)        // -3
+    println(x mod y)        // -1
+    println(obdiv(x, y))    // -4  Oberon semantics on request
+    println(obmod(x, y))    // 1
+    // end::divmodbody[]
+
+    // tag::signedbody[]
+    u := 0ffffffffh         // largest uint32 value
+    s := cast(int32, u)     // reinterpret the bits: -1
+    println(s)
+    s := -5
+    u := cast(uint32, s)    // 4294967291
+    println(u)
+    b := 200
+    s := sigl(b)            // value conversion to the next larger signed type
+    println(s)
+    // end::signedbody[]
+
+    // tag::setsbody[]
+    caps := {0, 2, 8..11}
+    println(2 in caps)      // true
+    caps := caps + {3}
+    caps := caps - {2}
+    println(ord(caps))      // the bit pattern as a number: 3849
+    // end::setsbody[]
+end TypesDemo

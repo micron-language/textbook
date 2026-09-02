@@ -1,0 +1,15 @@
+// tag::useprinter[]
+module UsePrinter [level = 2]
+type Star = record end
+
+procedure Star.write*()
+begin print("*")
+end write
+
+import p := Printer(Star)
+var s: Star
+begin
+    p.writeTwice(@s)    // **
+    println("")
+end UsePrinter
+// end::useprinter[]

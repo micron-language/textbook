@@ -1,0 +1,22 @@
+// generic module: not compiled standalone, instantiated by UseStack.mic
+// tag::stack[]
+module Stack(T; const CAP: uint32)
+var
+    a: array CAP of T
+    n*: integer
+
+procedure push*(x: T)
+begin
+    a[n] := x; inc(n)
+end push
+
+procedure pop*(): T
+begin
+    dec(n)
+    return a[n]
+end pop
+
+begin
+    n := 0
+end Stack
+// end::stack[]
