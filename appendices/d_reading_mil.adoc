@@ -1,0 +1,113 @@
+[[app-d]]
+[appendix]
+=== Reading MIL
+
+`micc` compiles Micron to MIL, the Micron Intermediate Language,
+before generating native code or interpreting.
+MIL is inspired by the ECMA-335 <<TBD>> (.NET) common intermediate language with the
+baggage removed: a typed stack machine with modules, procedures and the
+Micron type system, no classes, no metadata streams, no exceptions machinery
+beyond what the language needs.
+MIL has a textual form, and being able to read it pays off in three places
+of this book: checking what `inline` expanded to (<<ch05>>),
+verifying a calling convention at the C boundary (<<ch13>>),
+and understanding what the runtime interface `MIC$` receives from generated
+code (<<TBD>>, the system's `MIC+.mil` is a handwritten MIL module).
+
+==== A module and its MIL
+
+The option `--dump mil` writes `<Module>.mil` next to the output.
+For the small module
+
+[source]
+----
+include::../examples/appd/Demo.mic[]
+----
+
+micc produces:
+
+[source]
+----
+module Demo
+  var x*: int32
+  procedure Twice* (n: int32):int32
+  begin
+    ldarg_0
+    ldc_i4_2
+    mul
+    ret
+  end Twice
+  procedure begin$() init
+  begin
+    ldc_i4_s 21
+    call Twice
+    stvar x
+  end begin$
+end Demo
+----
+
+The shape mirrors the source: a module with declarations and procedures,
+the module body compiled into a procedure marked `init`.
+Only the statement bodies changed representation:
+each is a sequence of stack instructions.
+
+==== The instruction vocabulary
+
+Reading MIL needs a small vocabulary, best learned from the dump above:
+
+- Loads push values: `ldarg_0` the first parameter, `ldc_i4_2` the
+  constant 2 as a 32-bit integer (`_s` marks a short immediate operand),
+  `ldvar` a module variable, `ldloc` a local, `ldind` the value a pointer points to.
+- Stores pop values into places: `stvar x`, `stloc`, `stind`.
+- Operators pop their operands and push the result: `mul`, `add`, `div`,
+  the comparisons, the conversions.
+- Control is structured: `call` and `ret` as expected, and MIL keeps
+  `if`/`while`/`switch` blocks rather than raw jumps,
+  which is why a dump remains readable.
+
+Suffixes carry the type (`i4`, `i8`, `u4`, `r4`...), so the dump also answers
+signedness questions: a Micron `div` on `uint32` becomes an unsigned
+division instruction, visibly distinct from the signed one, the guarantee
+behind the discipline of <<ch03>>.
+
+==== The two lower forms
+
+Two further dumps show the later stages of the pipeline.
+`--dump mll` writes the lowered linear form, still a stack machine but with
+blocks flattened to numbered instructions and every operation carrying its type:
+
+[source]
+----
+proc Demo!Twice
+     0: ldarg_i4 0
+     1: ldc_i4_2
+     2: mul_i4
+     3: ret 4
+----
+
+`--dump mrl` writes the register form the native code generators work from,
+with the stack traffic converted to virtual registers:
+
+[source]
+----
+proc Demo!Twice (vregs: 3, ops: 4)
+       0: v0 = ldarg_i4 0
+       1: v1 = ldc_i4 2
+       2: v2 = mul_i4 v0, v1
+       3: ret v2
+----
+
+From here to RISC-V, ARM or x86 is register allocation and instruction selection.
+For the purposes of this book the `.mil` form suffices;
+the lower forms are useful when a question is about generated code quality
+rather than semantics.
+
+==== Handwritten MIL
+
+MIL files are also compiler input: an import is satisfied by a `.mic`,
+`.mil` or `.mob` file alike.
+The system uses this once, for `MIC+.mil` (<<TBD>>):
+the runtime interface `MIC$` is not expressible as a Micron module name,
+so a small handwritten MIL module forwards each `MIC$` procedure to its
+implementation in the ordinary Micron module `MIC`.
+Reading it is a good exercise: it contains nothing but the vocabulary above.

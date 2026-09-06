@@ -1,0 +1,79 @@
+// Programming in Micron, chapter 6 — abstraction without object-orientation.
+// The same abstraction — a value sink — expressed with the three means the
+// language offers below the object-oriented level:
+//   1. a record with procedure-typed fields ("Wirth style")
+//   2. type-bound procedures and delegates
+//   3. an interface
+// Run with: micc --run Styles.mic
+
+module Styles [level=3]
+
+// tag::wirth[]
+type
+	Sink1 = record
+				put: procedure(me: ^Sink1; x: integer)
+				sum: integer
+			end
+
+	procedure accumulate(me: ^Sink1; x: integer)
+	begin
+		me.sum := me.sum + x
+	end accumulate
+
+	procedure feed1(s: ^Sink1)
+	var i: integer
+	begin
+		for i := 1 to 10 do s.put(s, i) end
+	end feed1
+// end::wirth[]
+
+// tag::delegate[]
+type
+	Acc = record sum: integer end
+
+	procedure Acc.put(x: integer)
+	begin
+		self.sum := self.sum + x
+	end Acc.put
+
+	procedure feed2(put: proc(^)(x: integer))
+	var i: integer
+	begin
+		for i := 1 to 10 do put(i) end
+	end feed2
+// end::delegate[]
+
+// tag::iface[]
+type
+	Sink3 = interface
+				proc put(x: integer)
+			end
+
+	procedure feed3(s: Sink3)
+	var i: integer
+	begin
+		for i := 1 to 10 do s.put(i) end
+	end feed3
+// end::iface[]
+
+var
+	s1: Sink1
+	a: Acc
+
+begin
+	// style 1: explicit procedure fields
+	s1.put := accumulate
+	s1.sum := 0
+	feed1(@s1)
+	println(s1.sum)
+
+	// style 2: a delegate carries object and procedure in one value
+	a.sum := 0
+	feed2(a.put)
+	println(a.sum)
+
+	// style 3: an interface variable accepts any suitable record
+	a.sum := 0
+	feed3(@a)
+	println(a.sum)
+end Styles

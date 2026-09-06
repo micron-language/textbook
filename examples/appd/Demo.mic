@@ -1,0 +1,9 @@
+module Demo
+var x: int32
+procedure Twice(n: int32): int32
+begin
+  return n * 2
+end Twice
+begin
+  x := Twice(21)
+end Demo

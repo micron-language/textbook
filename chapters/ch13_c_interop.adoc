@@ -1,0 +1,113 @@
+[[ch13]]
+=== Interfacing with C
+
+No systems language starts in an empty world.
+The operating systems, libraries and device vendors of this world usually speak C,
+and a language that cannot call into that world confines itself to its own islands.
+Micron interoperates with C at the level that matters, the calling convention,
+without adopting C's preprocessor, headers or type laxity.
+This chapter shows the mechanism and states its scope precisely.
+
+==== Extern procedures
+
+A procedure declared `extern` has no body in Micron; its implementation lives elsewhere.
+Plain `extern` means the implementation is another Micron object; `extern C` means a foreign
+function with C calling convention, and an optional string names the symbol
+when it differs from the Micron name:
+
+[source]
+----
+include::../examples/ch13/Clib.mic[tag=externc]
+----
+
+The declaration carries full Micron types, so every call is checked like a call to a native
+procedure; the trust boundary is the declaration itself, exactly as with a C prototype,
+but written once instead of included textually everywhere.
+`extern` procedures require level 1, so a module's heading again reveals
+that it depends on foreign code.
+
+==== What maps, and what does not
+
+Micron's basic types map directly onto the C types of the target:
+the fixed-width integers onto `int8_t` through `uint64_t`, `char` onto `char`,
+the floating point types onto `float` and `double`, and pointers onto pointers.
+A `^[]char` parameter matches a C `char*` pointing to a terminated string;
+a record type declared in Micron matches a C `struct` with the same members in the same order.
+The example passes a character array to `write` this way.
+
+Micron does not support the full C ABI, and says so rather than approximating silently.
+The principal restriction is structured returns: a Micron procedure cannot receive a `struct`
+returned by value from C, and C code cannot receive one from Micron.
+The workaround is the one C compilers use internally anyway:
+pass a pointer to the result as the first argument.
+
+[source]
+----
+// C: struct div_t div(int num, int den);  -- not callable directly
+// C wrapper: void div2(div_t* res, int num, int den) { *res = div(num,den); }
+type DivT = record quot, rem: int32 end
+procedure div2(res: ^DivT; num, den: int32); extern C
+----
+
+Variadic functions are the second deviation: Micron has no variable argument lists (<<ch05>>),
+so `printf` and friends are not callable; a fixed-arity wrapper on the C side,
+or the pointer-plus-count conventions of <<ch05>>, take their place.
+A general wrapper cannot forward a run-time argument array to `printf`,
+because C varargs are fixed at each call site;
+what it can do is parse the format string itself, as <<ch05>>'s Micron formatter does,
+and dispatch each specifier to a fixed-arity call:
+
+[source,c]
+----
+include::../examples/ch13/format_adapter.c[tag=adapter]
+----
+
+One such adapter serves every format string composed of the supported specifiers,
+and Micron passes it the same `(format, argument array)` pair as the pure Micron version,
+so the choice between the two is a build decision, not a design one.
+Finally, the compiler option `--abi c` selects a convention _close to_ the platform's C ABI
+on each target, not a guarantee of bit-for-bit conformance in every corner;
+the cases above are the documented boundary.
+
+==== Building against C code
+
+micc links foreign code directly: object files and archives are given as positional
+arguments, and `-L`/`-l` name library directories and archives in the usual way.
+
+[source]
+----
+micc --target x86 -L /usr/lib32 -l c crt.o Main.mic
+----
+
+There is no header translation step because there are no headers to translate;
+the Micron declarations of the foreign procedures are the interface.
+For a large C library, writing those declarations by hand is tedious,
+and the companion tool c2mil goes further than a binding generator:
+it translates C source, headers and implementations alike, into MIL,
+the Micron intermediate language (see <<app-d>> on MIL), as `.mil` files or relocatable objects
+with integrated MIL interface, which the Micron compiler uses like any other module.
+The reverse direction also works: a Micron module compiled with `-c` yields an ordinary object file,
+and its exported procedures are callable from C when their signatures stay within the mapped subset.
+
+==== Separate compilation
+
+Interoperability includes one's own past: a library should not have to be recompiled by every client.
+Micron modules compile separately by design.
+`micc -c` produces a `.mob` object file per module, which carries the module's compiled code
+together with its interface; a later compilation that imports the module finds the `.mob`
+through the import path and links it without seeing the source.
+Source is preferred over prebuilt artifacts when both are present,
+so a checkout with sources behaves as expected, and a distribution without them works too.
+The mechanism is Wirth's symbol-file idea in one file instead of two,
+and it is what makes the one-command build of the Micron System possible:
+micc is handed `Main.mic` and finds, compiles or reuses the other 26 modules by itself.
+
+==== The moral
+
+C interoperability in Micron is a border crossing, not a merger.
+Foreign procedures are declared explicitly, typed fully, confined to level 1 and higher modules,
+and checked at every call; what cannot be expressed, structured returns and variadic calls,
+is excluded openly with stated workarounds
+(for variadic interfaces, an array plus a count on the Micron side, as shown in <<ch05>>).
+Programs get the entire C ecosystem at the cost of a declaration per function,
+and the rest of the program remains as checkable as it was.

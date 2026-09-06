@@ -1,0 +1,136 @@
+[[ch12]]
+=== Low-Level Programming
+
+The chapters so far stayed at the higher levels of the language.
+This chapter descends to the features that exist because hardware is made of bits, addresses and
+registers: the bit manipulation functions, bit reinterpretation, memory-mapped device access,
+register access, and the two lowest language levels where these features live.
+Oberon collected such operations in the pseudo-module SYSTEM, a fig leaf that every real program had to import.
+Micron makes them ordinary predeclared functions and confines them by level instead:
+a module's heading states how deep it reaches, and an importer sees that statement.
+
+==== Bit manipulation
+
+The functions `band`, `bor`, `bxor` and `bnot` operate bitwise on integers;
+`shl` and `shr` shift logically, `asr` shifts arithmetically, preserving the sign:
+
+[source]
+----
+include::../examples/ch12/Bits.mic[tag=bitops]
+----
+
+These are functions, not operators.
+C overloads `&`, `|` and `>>` on its integer types and leaves the semantics of shifting signed
+values partly undefined; Micron names each operation, fixes logical and arithmetic shift apart,
+and defines the result types: the shifts yield the unsigned type of the operand's width
+for `shl`/`shr` and the operand's signed type for `asr`.
+Sets remain the better choice where the bits are individually meaningful flags (<<ch03>>);
+the bit functions serve where the value is genuinely a machine word, as in checksums,
+hashes and device protocols.
+
+==== Reinterpretation: cast and usig
+
+<<ch03>> separated the signed and unsigned families and introduced `val` for value conversion.
+Low-level code often needs the other conversion, the one that keeps the bits and changes the label:
+
+[source]
+----
+include::../examples/ch12/Bits.mic[tag=castbits]
+----
+
+`cast(T, x)` reinterprets the bits of `x` as type T; both types must have the same byte width,
+so a cast never truncates or extends silently.
+`usig(x)` is the shorthand for casting to the unsigned type of the same width.
+The pair replaces the union trick and the pointer-cast trick of C with one explicit, width-checked operation.
+
+==== Addresses and memory-mapped devices
+
+A pointer constructor with an address expression yields a pointer to a chosen location.
+This is how the Micron System talks to its devices; the module `SYS` writes a character
+to the RS232 debug console like this:
+
+[source]
+----
+procedure TRACE*(ch: char)
+  type Int32Ptr = pointer to int32
+begin
+  Int32Ptr{MIC.rs232data}^ := +ord(ch)
+end TRACE
+----
+
+`Int32Ptr{MIC.rs232data}` makes a pointer from the device address, a named constant,
+and the dereference `^` becomes a store to the device register.
+The SPI driver in the system's Kernel module reads and writes the disk the same way:
+
+[source]
+----
+Int32Ptr{spiCtrl}^ := CARD0
+Int32Ptr{spiData}^ := n
+repeat
+  ctrl := Int32Ptr{spiCtrl}^
+until ((ctrl mod 2) # 0)
+data := Int32Ptr{spiData}^
+----
+
+The idiom is exactly C's `*(volatile int*)0xFF04 = n`, 
+minus the cast chain and with the address kept as a typed constant.
+There is no `volatile` keyword; how repeated device accesses interact with optimization
+is a property of the compiler rather than of the language, and micc emits them as written.
+Records with `bits` fields (<<ch06>>) complete the picture for registers with packed layouts.
+
+Pointer arithmetic exists, but it is spelled out.
+`ptroff(p, n)` advances a pointer by `n` elements of its base type,
+and `inc`/`dec` on a pointer move by one element:
+
+[source]
+----
+include::../examples/ch12/Bits.mic[tag=ptroff]
+----
+
+Nothing here is hidden, and nothing happens through operator overloading:
+the reader can find every address computation by searching for three names.
+
+==== Registers, interrupts and level 0
+
+Below memory lies the processor itself.
+`getreg(r, v)` and `putreg(r, v)` copy between a register, named by a constant number,
+and a variable; `cli()` and `sti()` disable and enable interrupts; `nop()` emits
+a no-operation for timing loops and pipeline flushes.
+All of them are restricted to levels 0 and 1.
+The system's garbage collector uses `getreg` to capture the callee-saved registers as roots:
+
+[source]
+----
+procedure spillRegs*(p: ^array of uint32)
+begin
+  getreg(1, p[0])  // ra
+  getreg(2, p[1])  // sp
+  getreg(8, p[2])  // s0
+  // ... s1 through s11
+end spillRegs
+----
+
+Level 0 is the floor of the language: no stack, no heap, no recursion, every procedure implicitly `inline`.
+It exists for the moments before a machine is a machine, when the stack pointer is not yet set
+and calling a regular procedure is impossible.
+A boot sequence written at level 0 is a sequence of expanded procedure bodies that initialize
+the processor, the memory controller and the stack, and then jump into level 1 code.
+What was traditionally a few pages of assembler becomes Micron with the same portability
+properties as assembler, which is to say none, but with the same syntax, types and compiler as the rest of the system.
+
+NOTE: at the time of this writing, the available compiler backends still assume the presence of a stack; 
+so for some systems, a bit of assembler is still required to set the CPU in the right mode and
+for some other features (SMP, some interrupt handlers, etc.).
+
+==== The discipline of levels
+
+The point of these features is not that they are novel; C has had their equivalents,
+in rawer form, for fifty years.
+The point is containment.
+In C, any function in any file may cast an integer to a pointer and write through it;
+the reader who wants to rule it out must read everything.
+In Micron, a module using device addresses or registers is at level 0 or 1,
+and a module at level 3 cannot import it upward, so the unsafe operations sit
+in a layer that is closed from below and visible in every module heading.
+<<part3>> shows the payoff at system scale: 27 modules,
+of which a handful touch hardware, and the headings alone document which ones.

@@ -1,12 +1,25 @@
 // LeanDoc 2026-08-19
 
-// This and the referenced files may be used under the terms of the GNU General Public
-// License (GPL) versions 2.0 or 3.0 as published by the Free Software
-// Foundation, see http://www.gnu.org/copyleft/gpl.html for more information
+////
+Copyright © 2026 Rochus Keller
+
+This work is licensed under the Creative Commons Attribution–NonCommercial–ShareAlike 4.0
+International License (CC BY-NC-SA 4.0).
+
+You are free to copy and redistribute the material in any medium or format, and to remix,
+transform, and build upon it, provided that you give appropriate credit, provide a link to the licence,
+indicate whether changes were made, use the material only for non-commercial purposes,
+and distribute adaptations under the same licence.
+
+Commercial use, including commercial publication, distribution, or sale of this work or adapted material,
+requires the prior written permission of the copyright holder.
+
+Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
+////
 
 = Programming in Micron
 Rochus Keller
-v0.1, 2026-09-02 
+v0.2, 2026-09-06
 :toc:
 :toclevels: 2
 :numbered:
@@ -43,11 +56,7 @@ TBD
 
 include::chapters/ch05_program_structure.adoc[]
 include::chapters/ch06_structured_types.adoc[]
-
-[[ch07]]
-=== Abstraction without Object-Orientation
-TBD
-
+include::chapters/ch07_abstraction_without_oop.adoc[]
 include::chapters/ch08_dynamic_memory.adoc[]
 
 [[ch09]]
@@ -56,12 +65,19 @@ TBD
 
 include::chapters/ch10_generic_modules.adoc[]
 
+[[ch11]]
+=== Compile-Time Programming
+TBD
+
+include::chapters/ch12_low_level.adoc[]
+include::chapters/ch13_c_interop.adoc[]
+
 
 [[part3]]
 [part]
 == Systems Programming — The Micron System
 
-Presen the Micron System, a port of Niklaus Wirth and Jürg Gutknecht's Project Oberon (edition 2013) to Micron.
+Present the Micron System, a port of Niklaus Wirth and Jürg Gutknecht's Project Oberon (edition 2013) to Micron.
 
 TBD
 
@@ -83,11 +99,7 @@ TBD
 === RISC5 vs. RV32
 TBD
 
-[[app-d]]
-[appendix]
-=== Reading MIL
-TBD
-
+include::appendices/d_reading_mil.adoc[]
 include::appendices/e_syntax.adoc[]
 include::appendices/f_predeclared.adoc[]
 include::appendices/g_language_levels.adoc[]

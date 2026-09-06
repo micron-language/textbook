@@ -1,0 +1,241 @@
+[[ch07]]
+=== Abstraction without Object-Orientation
+
+Object-oriented programming acquired, over three decades, a reputation it did not earn on its merits alone,
+and lately a rejection it does not entirely deserve either.
+The interesting observation behind both is that most of what programs need from "objects" is not inheritance
+and not virtual dispatch.
+It is three humbler things: bundling operations with the data they operate on; passing behavior around as a value;
+and programming against a contract rather than a concrete type.
+
+Micron provides all three below the object-oriented level.
+Procedures can be bound to record types, statically and without any dispatch machinery;
+a bound procedure together with its receiver can be captured in a _delegate_ (i.e. bound procedure type);
+and _interface types_ specify contracts that any suitable type satisfies structurally, in the manner of Go.
+None of this requires objects, inheritance, or virtual method tables;
+all of it is available from language level 1 or 2 and resolved, wherever possible, at compile time.
+Object types and dynamic dispatch, and the cases where they are genuinely the right tool, are the subject of <<ch09>>.
+
+This chapter develops the three means in order, then compares them on a real program:
+the "Are We Fast Yet?" benchmark suite (see <<R5>>),
+which exist in several complete Micron implementations differing exactly in the means of abstraction they use.
+
+==== Procedures bound to record types
+
+A procedure can be declared with a _receiver_, which binds it to a record type declared in the same scope:
+
+----
+type
+	Ball = record
+			 x, y, xVel, yVel: int32
+		   end
+
+	procedure Ball.init()
+	begin
+		self.x := 0; self.y := 0
+		self.xVel := 0; self.yVel := 0
+	end Ball.init
+----
+
+`Ball.init` is local to the type `Ball`: its name does not compete with other declarations of the module,
+and other types may have their own `init`.
+Within the body, the receiver is available as `self`, a pointer to the record the procedure was called on.
+The receiver is always passed as a pointer, regardless of the syntax at the call site; for a variable `b: Ball`,
+the call `b.init()` is valid and passes `@b` automatically.
+(An explicit receiver name may be declared instead of the implicit `self`; both forms occur in this book.)
+
+The value of this feature is best measured against its absence.
+The same code in plain procedural style, the style of the C-derived _Procedural_ version of the benchmark suite, reads:
+
+----
+	procedure Ball_init(me: ^Ball)
+	begin
+		me.x := 0; me.y := 0
+		me.xVel := 0; me.yVel := 0
+	end Ball_init
+
+	...
+	Ball_init(@balls[i])
+----
+
+Nothing is wrong with this; it is exactly what a C programmer writes,
+with the type prefix `Ball_` maintained by hand and the address taken explicitly at every call.
+Bound procedures let the compiler maintain the prefix and take the address:
+the declaration becomes `procedure Ball.init()`, the call becomes `balls[i].init()`.
+No dispatch is involved; the procedure is resolved at compile time from the static type of the receiver,
+exactly like the underscored version.
+Records do not support inheritance, so there is nothing to dispatch on.
+The feature costs nothing at run time; what it removes is boiler-plate, and with it a class of clerical errors.
+
+Coming from Go: this is Go's receiver syntax without Go's method-set rules.
+Because the receiver is always a pointer, the distinction between value receivers and pointer receivers,
+with its puzzles about addressability and automatic dereferencing, does not exist.
+
+==== Delegates: behavior as a value
+
+Procedure types have been part of the Wirth line since Modula-2, and Micron has them (<<ch06>>):
+a variable of type `procedure(x: integer)` holds any procedure with a matching signature,
+and the Oberon System of <<part3>> is built almost entirely on this mechanism.
+But a plain procedure variable holds only the procedure.
+If the procedure is to operate on a particular record, the record must travel separately,
+by convention as an explicit first parameter:
+
+// tag::wirth[]
+----
+type
+	Sink1 = record
+				put: procedure(me: ^Sink1; x: integer)
+				sum: integer
+			end
+
+	procedure accumulate(me: ^Sink1; x: integer)
+	begin
+		me.sum := me.sum + x
+	end accumulate
+
+	procedure feed1(s: ^Sink1)
+	var i: integer
+	begin
+		for i := 1 to 10 do s.put(s, i) end
+	end feed1
+----
+// end::wirth[]
+
+This is the "Wirth style": a record of procedure fields, installed at initialization time,
+invoked with the record itself as first argument (`s.put(s, i)`).
+It works, it is completely explicit, and <<part3>> shows it carrying an entire operating system.
+Its weakness is also visible: the pairing of object and procedure is reestablished by hand at every call,
+and nothing prevents calling `s.put(t, i)` with the wrong record of the same type.
+
+A _delegate_, in the language a variable of _type-bound procedure type_, captures the pair as one value.
+The type is written `proc(^)(...)`, read "a procedure bound to some receiver":
+
+----
+type
+	Acc = record sum: integer end
+
+	procedure Acc.put(x: integer)
+	begin
+		self.sum := self.sum + x
+	end Acc.put
+
+	procedure feed2(put: proc(^)(x: integer))
+	var i: integer
+	begin
+		for i := 1 to 10 do put(i) end
+	end feed2
+
+	...
+	var a: Acc
+	feed2(a.put)     // captures both a and Acc.put
+----
+
+The designator `a.put`, not called but assigned, produces the delegate:
+a compound value containing the receiver pointer and the procedure.
+`feed2` needs to know nothing about `Acc`; it receives behavior with its state already attached.
+This is what closures and iterator blocks provide in higher-level languages, reduced to its systems-programming core:
+no environment capture, no allocation, two words passed by value.
+
+The _Hybrid_ version of the benchmark suite is built this way;
+the delegate-based emulation of the original Smalltalk closures and iterators is markedly leaner than the 
+object-oriented version based on inheritance and virtual methods.
+
+==== Interfaces: contracts satisfied structurally
+
+The third mechanism abstracts one step further: not one procedure, but a set of them,
+specified without reference to any implementing type.
+
+// tag::iface[]
+----
+type
+	Sink3 = interface
+				proc put(x: integer)
+			end
+
+	procedure feed3(s: Sink3)
+	var i: integer
+	begin
+		for i := 1 to 10 do s.put(i) end
+	end feed3
+
+	...
+	var a: Acc
+	feed3(@a)        // Acc satisfies Sink3: it has put(x: integer)
+----
+// end::iface[]
+
+An interface declares procedure signatures and nothing else.
+A pointer to any record (or object) type whose bound procedures cover those signatures may be assigned to an
+interface variable: no declaration of intent, no `implements` clause, no common base type.
+Satisfaction is structural, as in Go.
+The contract is the shape.
+
+Two properties distinguish Micron's interfaces from the object-oriented machinery of <<ch09>>.
+First, they are available at language level 2, below dynamic memory and below objects;
+a driver may define interfaces over statically allocated records.
+Second, for record types there is no dynamic dispatch involved in satisfying them:
+which `put` is meant is known at compile time; the interface value, like the delegate,
+is a receiver pointer paired with procedures.
+The compiler generates the necessary tables per interface and type pair,
+which is the reason interfaces sit at level 2 rather than level 1.
+
+Compared with a record of procedure variables, the interface moves the wiring from run time to compile time:
+nothing is installed, nothing can be installed wrongly or forgotten, and the calls need no explicit receiver argument.
+Compared with a delegate, the interface groups several procedures under one binding.
+
+The complete three-style example of this chapter is a single runnable module, `examples/ch07/Styles.mic`;
+all three variants compute the same sum through the same loop,
+differing only in the mechanism by which behavior reaches it.
+
+==== One program, three ways: the benchmark suite
+
+Doctrine is cheap; the "Are we fast yet" (<<R5>>) repository offers evidence.
+The suite, nine to fourteen benchmarks originally designed to compare languages,
+including object-heavy programs such as Richards, DeltaBlue and a JSON parser,
+exists in four complete Micron implementations, the following three at language levels 2 and 3, none using object types:
+
+*Procedural* is a direct migration of the C implementation: records,
+free-standing procedures with the type prefix in the name, explicit `@` at call sites.
+It is the baseline; everything the other two versions do can be done this way, at the price of boiler-plate.
+
+*Hybrid* rewrites the same programs with bound procedures and delegates.
+The framework's central type shows the Wirth style retained where it fits,
+a `Benchmark` record with four procedure fields installed by each benchmark's `create`,
+while the benchmarks themselves use bound procedures throughout,
+and delegates replace the closures of the Smalltalk original.
+
+*Interfaces* replaces the record of procedure fields by a four-procedure interface;
+each benchmark provides a record whose bound procedures satisfy it structurally:
+
+----
+type
+	Benchmark* = interface
+					proc benchmark(): integer
+					proc verifyResult(result: integer): boolean
+					proc innerBenchmarkLoop(innerIterations: integer): boolean
+					proc release()
+				 end
+----
+
+The framework calls `me.verifyResult(me.benchmark())` on the interface;
+the `create` procedures shrink to an allocation and a `return`, with no field wiring and no casts.
+The suite's Readme draws the conclusion this chapter is built on:
+the interface version is the most elegant of the three, with the least boiler-plate,
+and all of it below the object-oriented level.
+
+The reader is encouraged to run all three (`micc --run awfy.micpro` in each directory) and to diff one
+benchmark across the versions; `Bounce.mic` is the smallest.
+Few exercises teach the cost and payoff of abstraction mechanisms more directly.
+
+==== Choosing
+
+A rule of thumb, refined through <<part3>>:
+
+- Data with associated operations, one implementation, no substitution: *bound procedures*.
+  Zero cost, less boiler-plate; this should be the default over free procedures with type-prefixed names.
+- A single behavior handed to another module, such as a callback,
+  a comparison, an iterator body or a completion action: a *delegate* (or a plain procedure type where no state is needed).
+- Several implementations behind one contract, chosen by the provider rather than the caller: an *interface*.
+- Substitutable implementations that must also *extend* one another, with inherited state, overridden behavior, 
+  or heterogeneous collections of a common base: only then object types, in <<ch09>>.
+
