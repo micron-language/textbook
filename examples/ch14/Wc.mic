@@ -1,0 +1,50 @@
+// Counting bytes and lines of a file; writes its own input for the test.
+module Wc
+
+import Files, Out
+
+var
+    f: Files.File
+    name: array 12 of char
+
+// tag::count[]
+procedure count(name: ^[]char)
+    var
+        f: Files.File
+        b: byte
+        bytes, lines: int32
+begin
+    f := Files.Open(name, Files.ReadOnly)
+    if f = nil then Out.String("cannot open file") Out.Ln return end
+    bytes := 0 lines := 0
+    while Files.Read(f, @b) do
+        inc(bytes)
+        if b = 10 then inc(lines) end   // 10 = line feed
+    end
+    Files.Close(f)
+    Out.Int(bytes, 0) Out.String(" bytes, ")
+    Out.Int(lines, 0) Out.String(" lines") Out.Ln
+end count
+// end::count[]
+
+procedure put(f: Files.File; const s: ^[]char)
+    var i: uint32
+begin
+    i := 0
+    while s[i] # 0x do
+        if not Files.Write(f, val(byte, ord(s[i]))) then return end
+        inc(i)
+    end
+    if not Files.Write(f, 10) then return end   // line feed
+end put
+
+begin
+    name := "wc_test.txt"
+    f := Files.Open(@name, Files.Create)
+    if f = nil then Out.String("cannot create file") Out.Ln return end
+    put(f, "first line")
+    put(f, "second line")
+    Files.Close(f)
+    count(@name)
+    if not Files.Delete(@name) then Out.String("cleanup failed") Out.Ln end
+end Wc

@@ -1,0 +1,56 @@
+// BOOK-CHECK-ONLY: opens a window; validated with micc --check.
+// A minimal sketch pad: paint with the left mouse button, Escape quits.
+module Sketch
+
+import Screen, Out
+
+const
+    W = 512
+    H = 512
+    Stride = W div 8
+
+var fb: array Stride * H of byte
+
+procedure plot(x, y: int32)
+    var i: int32
+begin
+    if (x < 0) or (x >= W) or (y < 0) or (y >= H) then return end
+    i := y * val(int32, Stride) + x div 8
+    fb[i] := val(byte, bor(val(uint32, fb[i]), shl(val(uint32, 1), usig(7 - x mod 8))))
+end plot
+
+// tag::sketch[]
+procedure run()
+    var
+        res, evt, kind, x, y, buttons: int32
+        quit: boolean
+begin
+    if not Screen.Open(@fb, val(int32, Stride * H), val(int32, W), val(int32, H), {}) then
+        Out.String("cannot open window") Out.Ln
+        return
+    end
+    quit := false
+    repeat
+        res := Screen.ProcessEvents(10)
+        evt := Screen.NextEvent()
+        while evt # 0 do
+            kind := val(int32, band(shr(usig(evt), 24), 0FH))
+            if (kind = Screen.EvtKeyDown) and
+               (band(evt, 0FFFFFFH) = Screen.KeyEscape) then
+                quit := true
+            end
+            evt := Screen.NextEvent()
+        end
+        buttons := Screen.GetMouseState(@x, @y)
+        if band(buttons, Screen.MouseLeft) # 0 then
+            plot(x, y)
+            Screen.UpdateArea(x, y, 1, 1)
+        end
+    until (res < 0) or quit
+    Screen.Close
+end run
+// end::sketch[]
+
+begin
+    run
+end Sketch

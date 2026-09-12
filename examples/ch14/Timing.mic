@@ -1,0 +1,19 @@
+// Measuring elapsed time with Time.Ticks.
+module Timing
+
+import Time, Out
+
+var
+    start, stop: uint64
+    i, s: int32
+
+// tag::timing[]
+begin
+    start := Time.Ticks()
+    s := 0
+    for i := 1 to 1000000 do s := s + i mod 7 end
+    stop := Time.Ticks()
+    Out.Int(s, 0) Out.String(" in ")
+    Out.Int(val(int64, stop - start), 0) Out.String("us") Out.Ln
+end Timing
+// end::timing[]

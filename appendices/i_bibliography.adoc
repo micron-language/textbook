@@ -29,4 +29,6 @@
 - [[[R9]]] R. Keller:
   *The Micron Programming Language Specification.*
   Distributed with the Micron source repository.
+- [[[R10]]] *The Oakwood Guidelines for Oberon-2 Compiler Developers.*
+  1995.
 

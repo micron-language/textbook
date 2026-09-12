@@ -1,0 +1,29 @@
+// A file copy utility built from Args and Files.
+module Copy
+
+import Files, Out, Args
+
+var
+    src, dst: Files.File
+    b: byte
+
+// tag::copy[]
+begin
+    if Args.Count() < 3 then
+        Out.String("usage: Copy from to") Out.Ln
+        return
+    end
+    src := Files.Open(Args.Arg(1), Files.ReadOnly)
+    if src = nil then Out.String("cannot open input") Out.Ln return end
+    dst := Files.Open(Args.Arg(2), Files.Create)
+    if dst = nil then Out.String("cannot create output") Out.Ln return end
+    while Files.Read(src, @b) do
+        if not Files.Write(dst, b) then
+            Out.String("write error") Out.Ln
+            return
+        end
+    end
+    Files.Close(dst)
+    Files.Close(src)
+end Copy
+// end::copy[]

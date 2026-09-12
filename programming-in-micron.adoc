@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.2, 2026-09-06
+v0.3, 2026-09-12
 :toc:
 :toclevels: 2
 :numbered:
@@ -71,6 +71,8 @@ TBD
 
 include::chapters/ch12_low_level.adoc[]
 include::chapters/ch13_c_interop.adoc[]
+include::chapters/ch14_oakwood_modules.adoc[]
+include::chapters/ch15_screen_graphics.adoc[]
 
 
 [[part3]]

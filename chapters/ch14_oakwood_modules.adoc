@@ -1,0 +1,246 @@
+[[ch14]]
+=== The Oakwood Modules
+
+Every program in this book so far has produced its output with `print` and `println`,
+the two predeclared procedures that exist precisely so that the early chapters
+could show programs without first introducing a library.
+Real programs need more: files, command line arguments, formatted output,
+elementary functions, a clock.
+Micron's compiler ships with a small set of library modules for these needs,
+kept in a directory called `oakwood`, and this chapter introduces them.
+
+One caution before the tour.
+These modules are a working set, not a finished standard library;
+the standard library of Micron is still under design and will grow in a directory of its own.
+What the oakwood modules offer is the minimum a practical program needs today,
+with interfaces stable enough to build on, and everything this chapter shows about
+using them, the declaration conventions, the result conventions, the interplay with
+`extern`, carries over to whatever library comes later.
+
+.Why "oakwood"?
+****
+The name comes from the _Oakwood Guidelines for Oberon-2 Compiler Developers_ of 1995 <<R10>>,
+named after the hotel where the compiler writers met.
+The guidelines standardized the library modules that live _outside_ an Oberon System,
+so that ordinary programs could be ported between compilers:
+`In`, `Out`, `Files`, `Strings`, `Math` and a few more.
+Oberon+ adopted these interfaces nearly verbatim; Luon already deviated;
+and Micron, with its focus on embedded targets and its C affiliation,
+kept the names but redesigned much of the substance.
+About a third of what follows is still Oakwood: `Out` and `Math` are close
+to the guidelines, `Files` has become a C-like handle interface,
+and `Args`, `Time` and `Screen` (the subject of <<ch15>>) never were Oakwood at all.
+The directory keeps its name as a record of that lineage.
+****
+
+==== Interface modules and their implementations
+
+The oakwood modules demonstrate the `extern` mechanism of <<ch13>> in production:
+each module is a Micron source file containing only declarations,
+every procedure marked `extern`, and the implementation lives in C
+(for instance `Files+.c` beside `Files.mic`) or, when running under micc's
+interpreter, in built-in procedures of the interpreter itself.
+The same interface file therefore serves a native build and the interpreted mode.
+Programs import the modules as usual and micc finds them through the include path:
+
+[source,text]
+----
+micc --run -I <oakwood> Program.mic
+----
+
+A word on appearance: the oakwood sources are written with keywords in upper case,
+`MODULE`, `PROCEDURE`, `EXTERN`, as Oberon tradition demands and as their Oakwood descent suggests.
+Micron accepts both spellings, as introduced in <<ch03>>;
+this book's examples stay in lower case, and both sides compile unchanged.
+
+==== Out: formatted output
+
+`Out` writes human-readable text to standard output.
+Its interface is the Oakwood one, minus the historical `Open`:
+
+[source]
+----
+PROCEDURE Char (ch: CHAR) EXTERN;
+PROCEDURE String (const str: POINTER TO ARRAY OF CHAR) EXTERN;
+PROCEDURE Int (i: INT64; n: INT32) EXTERN;
+PROCEDURE Real (x: REAL; n: INT32) EXTERN;
+PROCEDURE LongReal (x: LONGREAL; n: INT32) EXTERN;
+PROCEDURE Ln EXTERN;
+----
+
+The second parameter `n` is the minimum field width, with `0` meaning
+"as wide as needed"; `Ln` ends the line.
+The difference to `println` is control: `println` takes one value and always ends the line,
+`Out` composes a line from pieces.
+The quadratic solver below prints both roots on one line this way.
+Note also what `Out` does not have: no `Open`, no error result.
+Output to a standard stream either works or the program has bigger problems;
+a library should not make the common case verbose.
+
+==== Math and MathL
+
+`Math` declares the elementary functions over `REAL`: `sqrt`, `exp`, `ln`,
+`power` and `log` (both with the base as second parameter), `round`,
+the trigonometric family `sin` through `arctan2`, and the hyperbolic family,
+plus the constants `pi` and `e`.
+`MathL` is the same interface over `LONGREAL`.
+The split by precision instead of overloading is Oakwood heritage and fits
+Micron anyway: the language has no overloading, so a procedure's argument
+and result types are fixed in its declaration.
+
+A worked example, the numerically unexciting but familiar quadratic equation:
+
+[source]
+----
+include::../examples/ch14/Roots.mic[tag=roots]
+----
+
+Called with `solve(1.0, -3.0, 2.0)` this prints the roots `2` and `1`;
+a negative discriminant takes the early exit.
+The complete program is in the book sources as `Roots.mic`.
+
+==== Args: the command line
+
+`Args` is as small as its job:
+
+[source]
+----
+PROCEDURE Count (): UINT32 EXTERN;
+PROCEDURE Arg (i: UINT32): String EXTERN;
+----
+
+`Count()` includes the program name, which is argument `0`, as in C's `argv`;
+`Arg` returns a pointer to a runtime-managed character array, or `nil` for
+an index out of range.
+Where a C programmer writes `argc`/`argv` and a Pascal programmer `ParamCount`/`ParamStr`,
+the Micron programmer imports a module; the information is the same.
+
+==== Files: a C-like file interface
+
+`Files` is where Micron departs furthest from Oakwood.
+Wirth's original `Files` module implements the rider concept:
+a file is a sequence of bytes, and any number of riders, positioned read/write
+heads, move over it.
+Micron's `Files` instead wraps the C file model that every host system provides:
+a `File` is an opaque handle with one implicit position, obtained from `Open`
+and returned to the system with `Close`.
+
+[source]
+----
+TYPE
+    File = POINTER TO Handle;
+    Mode = (ReadOnly, Create, Modify)
+
+PROCEDURE Open (name: POINTER TO ARRAY OF CHAR; mode: Mode): File EXTERN;
+PROCEDURE Close (f: File) EXTERN;
+PROCEDURE System (what: Std): File EXTERN;
+----
+
+The three modes map directly onto C's `"rb"`, `"wb+"` and `"rb+"`:
+`ReadOnly` opens an existing file for reading, `Create` truncates or creates
+for reading and writing, `Modify` opens an existing file for reading and
+writing without truncation.
+`Open` returns `nil` on failure, and `System` yields handles for the three
+standard streams (`Stdin`, `Stdout`, `Stderr`), so the same read and write
+procedures serve files and console alike.
+
+The read and write procedures follow one rule worth stating explicitly:
+_operations transferring a value of known size return `BOOLEAN`;
+operations transferring a variable amount return the transferred count as
+`UINT32`, with `0` indicating failure or end of file._
+
+[source]
+----
+PROCEDURE Read (f: File; x: POINTER TO BYTE): BOOLEAN EXTERN;
+PROCEDURE ReadInt (f: File; x: POINTER TO INT32): BOOLEAN EXTERN;
+PROCEDURE ReadBytes (f: File; x: POINTER TO ARRAY OF BYTE; n: UINT32): UINT32 EXTERN;
+PROCEDURE Write (f: File; x: BYTE): BOOLEAN EXTERN;
+PROCEDURE WriteInt (f: File; x: INT32): BOOLEAN EXTERN;
+PROCEDURE WriteBytes (f: File; x: POINTER TO ARRAY OF BYTE; n: UINT32): UINT32 EXTERN;
+----
+
+A single byte or an `INT32` either transfers completely or not at all,
+hence `BOOLEAN`; a block of `n` bytes may transfer partially,
+hence the count.
+The same families exist for `INT64`, `REAL`, `LONGREAL`, `SET` and `BOOLEAN`;
+the typed variants read and write the value's memory representation,
+so they are for binary files whose producer and consumer agree on the format.
+Around them, `Length`, `Pos` and `Set` handle positioning with `UINT32` byte
+positions, `Eof` tests for end of file, `Delete` and `Rename` manipulate the
+directory, and `OpenDir`/`ReadDir`/`CloseDir` enumerate one.
+
+Two worked utilities show the style.
+The first is the classic copy program, argument handling included:
+
+[source]
+----
+include::../examples/ch14/Copy.mic[tag=copy]
+----
+
+The copy loop is the byte-at-a-time idiom from Wirth's books, and the C library
+underneath buffers it, so it is less naive than it looks;
+`ReadBytes` and `WriteBytes` transfer blockwise when it matters.
+The second utility counts bytes and lines, a fragment of `wc`:
+
+[source]
+----
+include::../examples/ch14/Wc.mic[tag=count]
+----
+
+One detail in `count` deserves attention because it catches programmers arriving
+from managed languages: `bytes` and `lines` are explicitly zeroed before the loop.
+Local variables in Micron are _not_ initialized automatically
+(only level 5 initializes pointer values, to `nil`);
+a forgotten initialization compiles fine and delivers whatever the stack held.
+The test program around `count` writes its own input file first,
+using `Files.Write` per character, and deletes it afterwards with `Files.Delete`.
+
+==== Time: measuring durations
+
+The `Time` module replaces Oakwood's `Input.Time` and does exactly one thing:
+
+[source]
+----
+CONST TimeUnit = 1000000;
+PROCEDURE Ticks (): UINT64 EXTERN;
+----
+
+`Ticks` returns the number of microseconds (`TimeUnit` counts per second)
+elapsed since the application started; the counter is monotonic and starts at zero,
+so it measures durations and is not a clock.
+The result type `UINT64` is no luxury: a microsecond counter in 32 bits wraps
+after 71 minutes, silently, in the middle of exactly the kind of long-running
+measurement it exists for.
+The pattern is the obvious one:
+
+[source]
+----
+include::../examples/ch14/Timing.mic[tag=timing]
+----
+
+This is the same pattern the Are-we-fast-yet harness uses around
+every benchmark: two `Ticks()` calls, a subtraction in the unsigned domain,
+and the difference converted once for printing.
+
+==== What is deliberately missing
+
+Readers coming from Oberon will miss `In` and `Strings`;
+readers coming from C will miss `printf` and `malloc`.
+None of these is an oversight.
+Oakwood's `In` reads from "the current input", a concept from the Oberon System
+where input is a marked text; on a host system `Files.System(Stdin)` and the
+`Files` read procedures do the job without a second convention and without `In`'s global `Done` flag.
+Oakwood's `Strings` assumes arrays that know their length, which Micron arrays do not (<<ch06>>);
+a string library for Micron must be designed with explicit
+capacities and is part of the standard library work.
+`printf` needs variadic procedures, which Micron does not have (<<ch05>>);
+composing output from typed `Out` calls is the replacement.
+And memory management needs no library at all: it is in the language,
+at the levels described in <<ch08>>.
+
+The sum is characteristic of the language it serves:
+a handful of small modules, each an ordinary interface file the reader can open
+and understand in a minute, no hidden runtime behind them, and a stated rule
+where uniformity matters, as in the `Files` result convention.
+The next chapter uses the largest of the modules, `Screen`,
+to put interactive graphics on the same foundation.

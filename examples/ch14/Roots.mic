@@ -1,0 +1,25 @@
+// Solving a quadratic equation with Math.
+module Roots
+
+import Math, Out
+
+// tag::roots[]
+procedure solve(a, b, c: real)
+    var d, x1, x2: real
+begin
+    d := b*b - 4.0*a*c
+    if d < 0.0 then
+        Out.String("no real roots") Out.Ln
+        return
+    end
+    d := Math.sqrt(d)
+    x1 := (-b + d) / (2.0*a)
+    x2 := (-b - d) / (2.0*a)
+    Out.Real(x1, 0) Out.Char(' ') Out.Real(x2, 0) Out.Ln
+end solve
+// end::roots[]
+
+begin
+    solve(1.0, -3.0, 2.0)   // 2 1
+    solve(1.0, 0.0, 1.0)    // no real roots
+end Roots

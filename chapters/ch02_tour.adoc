@@ -60,7 +60,7 @@ Assignment is `:=` and equality is `=`; the C programmer's `=`/`==` trap does no
 
 *Input and output.* `print` and `println` are predeclared procedures that accept a value of any basic type or a string;
 they exist so that programs like this one need no library.
-Real programs use library modules, such as the `Out` module of the Oakwood guidelines <<TBD>> that ships with the compiler,
+Real programs use library modules, such as the `Out` module of the Oakwood guidelines <<R10>> that ships with the compiler,
 or the Files and Texts modules of <<part3>>.
 
 ==== Two modules

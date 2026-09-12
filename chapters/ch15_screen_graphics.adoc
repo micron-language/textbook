@@ -1,0 +1,192 @@
+[[ch15]]
+=== Graphics with Screen
+
+The `Screen` module is the largest of the oakwood set;
+it is a replacement and extension of the Oakwood XYplane and Input modules.
+It gives a program one window, a monochrome framebuffer, raw input events,
+mouse polling, a cursor and a millisecond timer; on the host it is implemented
+against SDL, XCB or Qt, behind the same Micron interface.
+That short list is enough for an interactive application,
+and this chapter builds two: a sketch pad and Barnsley's fractal fern,
+the closing example of Wirth's _Programming in Oberon_, here in Micron.
+
+The design is worth a moment before the procedures.
+`Screen` does not offer drawing operations, no lines, no fills, no text.
+It offers _memory_: the program owns a byte array, tells `Screen` to treat it
+as the picture, changes bytes, and reports which region changed.
+Everything a reader learned about bit manipulation in <<ch12>> becomes directly useful,
+and everything a graphics library would hide, pixel format, row layout,
+dirty regions, is in plain sight.
+This is the same discipline as the memory-mapped display of the Micron System
+and of historical machines from the Alto onward,
+which is precisely why the module exists: the Smalltalk-80 VM of <<TBD>>
+renders through `Screen`, and so does the Oberon System example when it runs directly on the host.
+
+==== The framebuffer
+
+One bit per pixel: a byte holds eight horizontal neighbours,
+a row of width `W` occupies `W div 8` bytes (the _stride_),
+and the buffer holds `stride * H` bytes for `H` rows.
+The program allocates this buffer itself, as an ordinary array:
+
+[source]
+----
+const
+    W = 512
+    H = 512
+    Stride = W div 8    // bytes per framebuffer row
+
+var fb: array Stride * H of byte
+----
+
+Two flags in `Open` set the interpretation, because history left two conventions
+of each kind: `LsbFirst` makes bit 0 of each byte the leftmost pixel (as in the Oberon System),
+its absence makes bit 7 leftmost (as in Smalltalk-80); 
+`BottomUp` puts row 0 at the bottom edge (Oberon) instead of the top (Smalltalk).
+With MSB-first, top-down layout, the empty flag set, setting a single pixel is
+the bit arithmetic of <<ch12>>:
+
+[source]
+----
+include::../examples/ch15/Fern.mic[tag=plot]
+----
+
+The byte index combines row offset and `x div 8`; the mask puts a one at bit
+`7 - x mod 8`, counting from the left; `bor` merges it into the byte,
+and the `val` conversions move between the `byte` element type and the
+`uint32` domain of the shift.
+Bounds checking in `plot` rather than at every call site keeps callers simple.
+
+==== Window, dirty rectangles, and the loop
+
+Three procedures manage the window:
+
+[source]
+----
+PROCEDURE Open (buf: POINTER TO ARRAY OF BYTE; bufLen, w, h: INT32;
+                flags: SET): BOOLEAN EXTERN;
+PROCEDURE Close EXTERN;
+PROCEDURE UpdateArea (x, y, w, h: INT32) EXTERN;
+----
+
+`Open` hands the buffer to the module and creates the window; it may be called
+again to resize or change flags, and returns `FALSE` if the platform refuses.
+`UpdateArea` does _not_ draw; it marks a rectangle dirty.
+Rendering happens inside `ProcessEvents`, which a running program calls anyway:
+
+[source]
+----
+PROCEDURE ProcessEvents (sleep: INT32): INT32 EXTERN;
+----
+
+`ProcessEvents` polls the host's event system, waits at most `sleep` milliseconds,
+copies dirty framebuffer regions to the window, and queues raw input events.
+Its result encodes three cases: `-1` means the user asked to quit (closed the window),
+`0` means "nothing new", and a positive count reports queued events.
+The separation of "mark dirty" from "render" means a program can set thousands
+of pixels and pay for one texture upload per loop iteration,
+the standard economy of framebuffer graphics.
+
+==== Events as packed integers
+
+Input arrives as `INT32` values from a queue:
+
+[source]
+----
+PROCEDURE NextEvent (): INT32 EXTERN;
+----
+
+`NextEvent` returns `0` when the queue is empty; otherwise bits 27..24 hold the
+event type and bits 23..0 the data, mouse coordinates, a button code,
+or a key code, depending on the type.
+The type codes are constants of the module, `EvtMouseMove` through `EvtKeyChar`,
+as are the special key codes (`KeyEscape`, `KeyReturn`, arrow keys and so on;
+printable keys report their ASCII value).
+Unpacking is two masks:
+
+[source]
+----
+kind := val(int32, band(shr(usig(evt), 24), 0FH))
+data := band(evt, 0FFFFFFH)
+----
+
+A packed event in one machine word instead of a record may look austere,
+but it is deliberate and has precedent: the event queue costs no allocation,
+fits any transport, and the Oberon System's `Input` module and the Smalltalk VM
+decode the same kind of word.
+For programs that prefer state polling over events, `GetMouseState` returns the
+current position through out-pointers and the button state as a bitmask
+(`MouseLeft`, `MouseMid`, `MouseRight`), matching the style of the Oberon
+System's mouse handling.
+
+The remaining procedures round off the window: `SetCursor` installs a custom
+1bpp cursor image with hotspot, `SetCursorPos` warps the pointer,
+and `GetTicks` returns milliseconds since the module started,
+a coarser sibling of `Time.Ticks` for animation pacing.
+
+==== A sketch pad
+
+The smallest interactive program uses both input styles at once:
+events for the keyboard, polling for the mouse.
+
+[source]
+----
+include::../examples/ch15/Sketch.mic[tag=sketch]
+----
+
+The loop shape is the one every `Screen` program has:
+`ProcessEvents` with a small sleep bounds the loop frequency;
+the inner `while` drains the event queue; the poll acts on current state.
+Painting sets one pixel and marks a one-pixel rectangle dirty,
+which is honest bookkeeping rather than pessimism, since `Screen` accumulates
+dirty rectangles until the next render.
+Escape sets `quit`, the window's close button makes `ProcessEvents` return `-1`,
+and both paths leave through the same `until`.
+
+==== The fractal fern
+
+Wirth ends _Programming in Oberon_ with Barnsley's fern, drawn by an iterated
+function system: a point hops through the plane, and each hop applies one of
+four affine maps, chosen at random with fixed probabilities.
+The attractor of this random walk is the fern.
+The maps and probabilities are Barnsley's:
+
+[source]
+----
+include::../examples/ch15/Fern.mic[tag=fern]
+----
+
+The scale factor 48 and the offsets place the fern's coordinate range,
+roughly -2.2..2.7 in x and 0..10 in y, on the 512-pixel canvas,
+with y inverted because our layout is top-down.
+Two hundred thousand points suffice for a dense image.
+
+The one ingredient Micron does not provide is randomness, so the program brings
+its own, the classic linear congruential generator in ten lines:
+
+[source]
+----
+include::../examples/ch15/Fern.mic[tag=random]
+----
+
+The multiplication overflows `uint32` routinely, which is exactly the intended
+arithmetic: unsigned types compute modulo 2^32^ by definition (<<ch03>>),
+so the generator needs no masking.
+Discarding the low bits (`shr(seed, 8)`) matters with an LCG,
+whose low bits cycle short; the top 24 bits divided by 2^24^ give a uniform
+value in [0, 1).
+
+The main program computes all points into the framebuffer first and only then
+opens the window, marks everything dirty once, and enters the event loop waiting
+for Escape or the close button.
+
+image:../images/fern.png[The fern drawn by Fern.mic (512 x 512, 1 bit per pixel)]
+
+The complete program is 90 lines.
+That is the measure of the module: an interactive graphical application,
+event handling included, fits in a chapter listing, with no framework,
+no callbacks to register, no state machine imposed from outside.
+The program owns the loop, the pixels and the timing,
+which is how the systems in <<part3>> want to be written,
+and the reader who has followed since <<ch12>> already knew every operation
+used to get the fern on the screen.

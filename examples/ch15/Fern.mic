@@ -1,0 +1,93 @@
+// BOOK-CHECK-ONLY: opens a window; validated with micc --check.
+// Barnsley's fractal fern on a 1bpp framebuffer.
+module Fern
+
+import Screen, Out
+
+const
+    W = 512
+    H = 512
+    Stride = W div 8    // bytes per framebuffer row
+
+var
+    fb: array Stride * H of byte
+    seed: uint32
+
+// tag::plot[]
+procedure plot(x, y: int32)
+    var i: int32
+begin
+    if (x < 0) or (x >= W) or (y < 0) or (y >= H) then return end
+    i := y * val(int32, Stride) + x div 8
+    fb[i] := val(byte, bor(val(uint32, fb[i]), shl(val(uint32, 1), usig(7 - x mod 8))))
+end plot
+// end::plot[]
+
+// tag::random[]
+procedure random(): longreal    // uniform in [0, 1)
+begin
+    seed := seed * 1664525 + 1013904223
+    return flt(val(int32, shr(seed, 8))) / 16777216.0
+end random
+// end::random[]
+
+// tag::fern[]
+procedure fern(points: int32)
+    var
+        x, y, xn, yn, r: longreal
+        i: int32
+begin
+    x := 0.0 y := 0.0
+    for i := 1 to points do
+        r := random()
+        if r < 0.01 then
+            xn := 0.0
+            yn := 0.16 * y
+        elsif r < 0.86 then
+            xn := 0.85 * x + 0.04 * y
+            yn := -0.04 * x + 0.85 * y + 1.6
+        elsif r < 0.93 then
+            xn := 0.2 * x - 0.26 * y
+            yn := 0.23 * x + 0.22 * y + 1.6
+        else
+            xn := -0.15 * x + 0.28 * y
+            yn := 0.26 * x + 0.24 * y + 0.44
+        end
+        x := xn y := yn
+        plot(val(int32, floor(x * 48.0)) + val(int32, W) div 2,
+             val(int32, H) - 1 - val(int32, floor(y * 48.0)))
+    end
+end fern
+// end::fern[]
+
+// tag::loop[]
+procedure show()
+    var res, evt, kind: int32; quit: boolean
+begin
+    if not Screen.Open(@fb, val(int32, Stride * H), val(int32, W), val(int32, H), {}) then
+        Out.String("cannot open window") Out.Ln
+        return
+    end
+    Screen.UpdateArea(0, 0, W, H)
+    quit := false
+    repeat
+        res := Screen.ProcessEvents(30)
+        evt := Screen.NextEvent()
+        while evt # 0 do
+            kind := val(int32, band(shr(usig(evt), 24), 0FH))
+            if (kind = Screen.EvtKeyDown) and
+               (band(evt, 0FFFFFFH) = Screen.KeyEscape) then
+                quit := true
+            end
+            evt := Screen.NextEvent()
+        end
+    until (res < 0) or quit
+    Screen.Close
+end show
+// end::loop[]
+
+begin
+    seed := 20260801
+    fern(200000)
+    show
+end Fern
