@@ -1,0 +1,79 @@
+[[app-b]]
+[appendix]
+=== The Micron System: Build, Boot and Design Notes
+
+<<part3>> explains the Micron System where it teaches the language.
+This appendix collects the operational facts in one place:
+how the system is built and started, and the design decisions of the port in
+summary form.
+It condenses the design description that accompanies the sources
+("The Micron Project Oberon System, design description", Design.md),
+which remains the authoritative document and covers each point in more depth.
+
+==== Build and startup
+
+Wirth's system is built in two stages: the compiler produces `.rsc` object files,
+and a boot linker prelinks the inner core into a boot image that the
+machine loads from the disk's boot sectors;
+the outer core is loaded dynamically by `Modules`.
+The Micron System has one stage.
+`micc` compiles and links all 27 modules into a single ELF file
+(the command line is in <<app-a>>),
+and the emulator loads it directly.
+
+The module bodies run in import dependency order and replace the
+initialization the boot linker generates.
+`Main` is the last body to run and plays the role of Wirth's boot linker for
+the outer core: it registers the commands of `System`, `Edit`, `Draw` and the
+example modules with `Modules.Register`, and it enters `Oberon.Loop`,
+which in Wirth's system is entered at the end of `Oberon`'s own body.
+
+==== The design decisions in summary
+
+Modules::
+There is no loader and no boot linker.
+`Modules.Load` finds the descriptor of an already linked module and creates
+it on demand; `Kernel.modules` is the list of these descriptors.
+
+Memory::
+The Kernel owns the heap; `new` and `newgc` reach it through the `MIC$`
+runtime callbacks installed at startup, without compiler magic.
+The free lists and block headers are Wirth's design, 
+unified to a 16-byte header. See <<ch19>>.
+
+Collector::
+The collector is conservative: it scans the stack, the static data area and
+the spilled registers, and keeps everything that looks like a pointer into
+the heap. Registers are made visible with `SYS.spillRegs`. See <<ch19>>.
+
+Memory layout::
+Wirth's fixed map places the display frame at `0E7F00H`.
+The emulator instead takes `--ram <MB>`, places the framebuffer at the top of
+RAM and passes the layout in the boot header:
+heap origin at `08H`, origin of the writable data at `0CH`,
+and end of usable RAM (`displayBase - 16`) at `010H`.
+`Kernel` and `Display` read the header instead of using constants.
+With `--ram 1` the layout is bit-for-bit Wirth's and an original Oberon disk
+image still boots; the system itself runs with 4 MB.
+See <<ch18>>.
+
+Machine access::
+There is no `SYSTEM` module.
+Pointer literals, `ptroff`, `cast`, `sigl`/`usig` and `val` express in the
+language what Oberon delegates to `SYSTEM`;
+the remaining machine-specific pieces (`ROT`, `spillRegs`, `TRACE`) are the
+small module `SYS`.
+All absolute addresses of the port are concentrated in `SYS`, `Kernel`,
+`MIC` and `Display`, so grepping for a pointer literal audits every place
+where the system touches the machine.
+See <<ch12>> and <<ch19>>.
+
+Arithmetic::
+Address and size computations moved to the unsigned domain;
+Oberon's truncating division survives as `obdiv`/`obmod` where the original
+algorithms depend on it. See TBD.
+
+Not implemented::
+The port has no traps and no dynamic module loading;
+the compiler is not part of the system (cross development from the host).
+The design description discusses each omission and what restoring it would take.

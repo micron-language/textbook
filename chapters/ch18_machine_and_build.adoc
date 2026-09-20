@@ -1,0 +1,159 @@
+[[ch18]]
+=== The Machine and the Build
+
+<<part3>> presents the Micron System, the port of Project Oberon (Wirth and Gutknecht,
+edition 2013) that this book uses as its running systems example.
+The chapters follow the system bottom-up, from the machine to the applications,
+and each stays close to the corresponding chapters of Wirth's book,
+which remains the reference for the design; here the subject is what Micron
+makes different.
+The port's own Design.md, kept with the sources, records every deviation;
+this part of the book draws on it and credits it once for all.
+
+==== The machine
+
+The target is the RV32 machine of the Project Oberon <<R2>> emulator:
+a 32-bit RISC-V core in place of Wirth's RISC-5 processor
+(his own design, not to be confused with RISC-V; <<app-c>> relates the two),
+with the original machine's devices at their original addresses:
+the millisecond timer, the SPI interface to the SD card, LEDs, RS232,
+mouse and keyboard, all memory-mapped in the top page of the address space.
+<<ch12>> showed how such devices are reached with pointer constructors;
+the Kernel's constants name them:
+
+[source]
+----
+const
+  timer = 0FFFFFFC0H
+  spiData = 0FFFFFFD0H
+  spiCtrl = 0FFFFFFD4H
+  LEDadr = 0FFFFFFC4H
+----
+
+One thing moved: Wirth's memory map is fixed, with the display frame buffer at
+`0E7F00H` and 164 KB left for the heap, too little for the conservative collector
+of the next chapter.
+The emulator therefore takes a `--ram <MB>` option, places the frame buffer at the
+top of RAM, and passes the layout to the software in a small boot header at the
+bottom of memory: the heap origin at address `08H`, the origin of the writable data
+at `0CH`, and the end of usable RAM at `010H`.
+`Kernel.Init` reads its world from that header rather than from constants:
+
+[source]
+----
+procedure Init*()
+begin
+  MemLim := Int32Ptr{010H}^
+  dataOrg := AnyPtrPtr{dataOrgAdr}^
+  heapOrg := AnyPtrPtr{08H}^
+  ...
+end Init
+----
+
+With `--ram 1` the layout coincides bit for bit with Wirth's and an original
+Project Oberon System binary and disk image still boot; the system itself runs with 4 MB,
+which yields about 3.2 MB of heap.
+The disk is a plain image file served by the emulator over the SPI device,
+so the Kernel's `FSoffset` is 0 instead of the `80000H` with which the original
+skips the FAT partition of a real SD card.
+
+==== One command, one file
+
+Wirth's system is built in two stages.
+`ORP` compiles each module to an `.rsc` object file; a boot linker prelinks the
+inner core into a boot image loaded from the disk's boot sectors,
+and `Modules` loads the outer core dynamically, module by module, on first import.
+
+The Micron System is built in one stage.
+`micc` compiles and links all 27 modules into a single statically linked,
+freestanding ELF file, with no C library involved:
+
+[source,shell]
+----
+micc --target rv32 -g --base 0 --runtime MIC+.mil -I . -o Main Main.mic
+rv32vm --elf --ram 4 --disk disk.img Main
+----
+
+The compiler follows the imports from `Main` down, compiles all modules,
+links, and the emulator loads the result directly.
+What the two-stage build achieves with a boot image and a loader,
+the one-stage build gets from a language rule (<<ch05>>):
+module bodies run in import dependency order.
+The bodies of `Kernel`, `Files`, `Display` and the rest initialize the system
+exactly as the boot linker's generated initialization sequence did,
+and no separate boot format is needed.
+
+==== Main as the boot linker
+
+`Main` imports every module of the outer core and is therefore the last body to run;
+it plays the role of Wirth's boot linker.
+Its body does two things: it registers the commands, and it enters the central loop.
+
+[source]
+----
+module Main [level=5]
+
+import Modules, Oberon, System, Edit, Curves, Rectangles, Draw,
+    GraphTool, Hilbert, Sierpinski, Stars, Hennessy
+
+begin
+  Modules.Register("System", "Date", System.Date)
+  Modules.Register("System", "Watch", System.Watch)
+  // ... some ninety registrations ...
+  Modules.Register("Edit", "Open", Edit.Open)
+
+  Oberon.Loop()
+end Main.
+----
+
+In Wirth's system a command is a name resolved by the module loader:
+clicking `Edit.Open` makes `Modules` find the module's object file,
+load it if necessary, and jump to an address in its entry table.
+Here there is no loader and no entry table, and the language provides the
+natural replacement: a command is a procedure type,
+
+[source]
+----
+Cmd* = procedure() // a command procedure
+----
+
+and `Modules.Register` stores name and value in one table, `cmdTab`:
+
+[source]
+----
+procedure Register*(const modname, cmdname: pointer to array of char; adr: Command)
+begin
+  if nofCmds < MaxCmds then
+    cmdTab[nofCmds].mod_ := ThisModule(modname)
+    copy(@cmdTab[nofCmds].name, cmdname, 32)
+    cmdTab[nofCmds].adr := adr
+    inc(nofCmds)
+  end
+end Register
+----
+
+`Modules.ThisCommand` becomes a table lookup returning a procedure,
+and `System.ShowCommands` lists what was registered.
+The user-visible behavior is Wirth's: middle-click a name of the form `M.P`
+and the procedure runs.
+What changed is below: the binding happens at link time and startup,
+in ordinary Micron, instead of at run time as in the Oberon System.
+
+`Modules` keeps its interface nonetheless, and its descriptor records,
+so that the correspondence to Wirth's book stays visible;
+`Load` merely finds the descriptor of an already linked module,
+and `Free` removes descriptors without unloading anything.
+
+==== Levels in the system
+
+The module headings of the system show the level attribute of <<ch02>> doing real work.
+`SYS`, `MIC`, `Kernel` and `FileDir` are declared `[level=1]`, the systems level;
+`Display` and `Input`, whose handlers use the object machinery, are `[level=4]`;
+and the rest of the system, from `Files` up to `Main`, runs at `[level=5]`,
+where `newgc` and the collector are available.
+The import rule, a module imports only modules at its own or a lower level,
+turns the layering of Wirth's book from a documentation convention into a
+checked property of the source text.
+
+The next chapter descends into the largest deviation from the original:
+the Kernel's heap and the conservative collector behind `newgc`.

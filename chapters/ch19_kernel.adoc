@@ -1,0 +1,194 @@
+[[ch19]]
+=== The Kernel: Memory, Heap, Collector
+
+The Kernel owns the machine's memory, as it does in Wirth's system,
+and this chapter is where the port deviates furthest from the original:
+`micc` generates neither module pointer tables nor type descriptors that Wirth's precise collector expects,
+so the Micron Kernel collects conservatively, in about 120 lines.
+On the way there, the chapter shows how the compiler's `new` reaches the Kernel at all,
+without any compiler support beyond an ordinary procedure variable.
+
+==== How new reaches the Kernel
+
+<<ch08>> introduced the allocation procedures and <<ch13>> the runtime interface: 
+for `new`, `newinit`, `newgc` and `dispose` the generated code calls runtime procedures
+declared by the intrinsic `MIC$` module, instead of expanding code inline.
+On a hosted target the runtime sits in a C library.
+This machine has none, so the system implements the runtime itself, in Micron:
+the MIL module `MIC+.mil` declares the `MIC$` names the generated code refers to,
+and forwards each to the module `MIC`, written in ordinary Micron.
+The file is called `MIC+.mil` because a Micron module name cannot contain a
+dollar sign, deliberately, so no module can collide with a runtime symbol.
+
+`MIC` is small: console output over RS232 for `println`, string comparison,
+set operations, `halt` and `assert`, and the allocation entry points.
+But `MIC` does not own the heap; the Kernel does, and the connection between the
+two is nothing more than two procedure variables:
+
+[source]
+----
+type
+  Allocator* = procedure(size: int32): AnyPtr
+
+var
+  newSys: Allocator  // the heap owner installs these, see Install
+  newGc: Allocator
+
+procedure Install*(new: Allocator; gc: Allocator)
+begin
+  newSys := new
+  newGc := gc
+end Install
+----
+
+At the end of `Kernel.Init` stands `MIC.Install(newSys, newGc)`,
+and from then on every allocation the compiler generates anywhere in the system runs through the Kernel.
+In Wirth's system the same connection needs compiler fixups resolved by the boot linker;
+here it is an import and a call, visible in the source.
+One rule keeps the arrangement sound: `MIC` must not itself depend on anything the
+generated code needs from `MIC$`, or the runtime would call itself.
+
+Two kinds of blocks result from calls to the allocation procedures.
+`newSys` serves `new` and `newinit`: blocks that live as long as the system,
+used for the Kernel's own structures, the sector buffers of `Files`, the module descriptors.
+`newGc` serves `newgc`: blocks the collector may reclaim; when the heap is full it collects once and retries:
+
+[source]
+----
+procedure newGc(size_: int32): AnyPtr
+  var p: AnyPtr
+begin
+  New(@p, nil, GcBlk, size_)
+  if p = nil then
+    Collect()
+    New(@p, nil, GcBlk, size_)
+  end
+  return p
+end newGc
+----
+
+==== The heap: Wirth's free lists
+
+`Kernel.New` keeps the structure of Wirth's allocator unchanged:
+four free lists for blocks of 32, 64, 128 and n·256 bytes,
+where a request is rounded up to the next size,
+larger free blocks are split, and a missing small block is made by splitting the
+next larger one (`GetBlock32` asks `GetBlock64` asks `GetBlock128` asks `GetBlock`).
+Every block carries a 16 byte header: its size, its kind (`SysBlk`, `GcBlk` or `FreeBlk`),
+its mark, and a tag word that keeps Wirth's layout expectation, 
+a type tag at `ptr-4`, describable for a future precise collector.
+The header is the same for all kinds of block, so Wirth's three trap entry points
+`NewRec`, `NewArr` and `NewSys` collapse into the one procedure `New`,
+reached through the callbacks.
+
+.A heap block; the pointer the program holds refers past the header
+----
+block start                                  p (what the program holds)
+v                                            v
++----------+----------+----------+----------+-------------------------+
+| size     | kind     | mark     | tag      | data                    |
++----------+----------+----------+----------+-------------------------+
+  offset 0   4          8          12 = p-4   16 ... size-1
+             SysBlk,    0 unmarked kept for
+             GcBlk or   1 reached  Wirth's
+             FreeBlk    2 done     layout
+----
+
+The header fields are read and written through the pointer arithmetic of <<ch12>>,
+wrapped in inline procedures so the offsets appear once:
+
+[source]
+----
+procedure blkKind(p: AnyPtr): int32 inline
+begin
+  return cast(Int32Ptr, ptroff(p, 4))^
+end blkKind
+----
+
+==== The conservative collector
+
+Wirth's collector is precise: `Kernel.GC(roots)` marks from a table of global
+pointer offsets that the boot linker generates for each module,
+and follows the pointer offsets recorded in each object's type descriptor.
+`micc` generates neither table, and extending the compiler for one example system was not worth it.
+The Micron Kernel therefore collects conservatively, in the style of the Boehm collector for C:
+anything that looks like a pointer is treated as one.
+
+The roots are three memory areas, marked word by word:
+the spilled registers (below), the static data of all modules,
+and the whole stack, dead frames included, so no stack pointer is needed:
+
+[source]
+----
+procedure Collect*()
+  var regs: array NofRegs of uint32
+  ...
+begin
+  inc(Collections)
+  SYS.spillRegs(@regs) // a pointer may be in a register; must be the first statement
+  mapBlocks()
+  markTop := 0
+  markOverflow := false
+  markArea(cast(AnyPtr, @regs[0]), cast(AnyPtr, ptroff(@regs[0], NofRegs)))
+  markArea(dataOrg, ptroff(stackOrg, -stackSize)) // the global variables of the modules
+  markArea(ptroff(stackOrg, -stackSize), stackOrg) // the whole stack
+  markReachable()
+  ...
+end Collect
+----
+
+A candidate word keeps a block alive when it addresses the block's interior,
+not only its start; this is not generosity but necessity, 
+since the glyph pointers in `Fonts` point into the middle of a block.
+The candidate test must therefore answer, for an arbitrary 32 bit word,
+which heap block contains this address, and answer it fast.
+`mapBlocks` rebuilds a block map at the start of every collection,
+recording for each 1 KB chunk of the heap the block covering its first byte;
+`blockOf` then indexes the map and walks forward at most 32 blocks.
+A block whose size is not a positive multiple of 8 ends the walk,
+so a word addressing a region the heap walk does not describe cannot fabricate a pseudo block,
+and an address inside a header does not count as a reference.
+
+Marking uses an explicit stack of 1024 entries rather than recursion.
+On overflow a block simply waits: it keeps mark 1 (reached, not yet expanded)
+instead of mark 2 (done), and after the stack drains, the heap is rescanned for waiting blocks.
+Marking is therefore complete but may take several passes over the heap in the rare case of overflow,
+a classic space-for-certainty trade.
+
+The sweep is Wirth's: a linear walk over the heap coalesces each run of free and
+unmarked `GcBlk` blocks into one area, and `freeArea` cuts each area into blocks
+of 32, 64, 128 and n·256 bytes for the four free lists,
+exactly as the original's `Scan` does.
+`SysBlk` blocks are never reclaimed, whatever points at them.
+
+The consequences are deliberate and worth stating plainly.
+A word that only looks like a heap address retains a block;
+the collector is conservative, and no claim beyond that is made.
+In exchange, no type information, no pointer maps and no compiler support are needed,
+and the whole collector, map, mark and sweep, fits in about 120 lines of the same language it collects.
+
+==== Registers as roots
+
+A conservative collector must also see pointers the compiler keeps in registers.
+`SYS.spillRegs` stores `ra`, `sp` and `s0` to `s11`,
+the registers of the RV32 calling convention that a callee must preserve,
+which are the only ones that can hold a pointer across a call,
+into fourteen words the collector passes in; `Collect` marks that area first.
+The procedure is written with `getreg` (<<ch12>>), so `SYS` needs no assembler,
+no MIL and no `extern`.
+One subtlety shows the reasoning that low-level Micron requires:
+since `spillRegs` is a real call, `getreg` may read the callee's saved `s0`
+rather than the caller's; the caller's value is then in `spillRegs` own stack frame,
+which is part of the stack the collector scans anyway.
+
+==== When collection runs
+
+As in the original, the collector runs as a task of the central loop (<<TBD>>),
+between commands, when the heap is nearly full or after a number of input actions;
+`Oberon.GC` calls `Kernel.Collect()`, and there is no root set to pass.
+An object reachable only from a local variable of a running command can therefore
+never be collected, which is what makes the whole-stack scan affordable.
+`System.Watch` prints the heap figures, with `Kernel.Collections` added to Wirth's numbers.
+
+The next chapter climbs one layer: the disk, the file system,
+and what remains of `Modules` when there is nothing left to load.

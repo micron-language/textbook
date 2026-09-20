@@ -1,0 +1,58 @@
+[[app-c]]
+[appendix]
+=== Wirth's RISC5 and Our RV32
+
+Two processor names appear in this book that are easily confused and must not be: 
+RISC-5 and RISC-V.
+
+RISC-5 is Wirth's own processor, designed for Project Oberon and described
+in his book about the computer <<TBD>>.
+It is a 32-bit machine of deliberate minimality: 16 registers,
+a small single-cycle instruction set, and a few special registers,
+among them `H` for the high word of a multiplication and the remainder of a division.
+Wirth implemented it on an FPGA; the "5" is a version number of his RISC series.
+
+RISC-V is the open instruction set architecture from Berkeley.
+The Micron System targets its 32-bit variant: the emulator's core is rv32emu,
+configured with the M (multiply/divide), A (atomics) and F (single float)
+extensions and without the compressed instructions,
+and `micc --target rv32` generates code for exactly that.
+
+Both Berkeley's and Wirth's share common design goals and features, 
+but are independent achievements.
+
+The port keeps everything around the processor which it replaces:
+
+- The devices are Wirth's, at Wirth's addresses: display frame buffer,
+  millisecond timer, SPI to the disk, PS/2 keyboard and mouse, LEDs, RS232.
+  The software of <<part3>> cannot tell it is not talking to the FPGA board.
+- The memory map is Wirth's when run with `--ram 1`, and generalized through
+  the boot header otherwise (<<ch18>>).
+- The code is RISC-V, produced by `micc`, in a statically linked ELF file
+  instead of `.rsc` object files and a boot image.
+
+What the change of processor cost in the sources is instructive because it is
+so little, and all of it is visible in the language:
+
+`SYSTEM.H`::
+On RISC-5 a division leaves the remainder in the `H` register and
+`SYSTEM.H(0)` reads it. RISC-V has no such register;
+Micron expresses the remainder as `mod` (or `obmod` where Oberon's truncating
+semantics are required, <<ch03>>), and Wirth's
+`ASSERT(SYSTEM.H(0) = 0)` checks became real assertions on `mod` TBD.
+
+Rotation::
+RISC-5 has a rotate instruction, reached as `SYSTEM.ROT`.
+The base RV32 instruction set has none, so `SYS.ROT` composes it from two
+shifts and a modulo on the count (<<ch12>>).
+
+Traps::
+Wirth's compiler emits trap instructions for run-time checks and the Kernel
+catches them. The port has no trap machinery; `assert` and `halt` report
+through the RS232 trace instead. Restoring traps would be an exercise in
+RISC-V exception handling, not in Micron.
+
+Everything else, including the raster operations, the disk driver and the
+collector, is processor-independent Micron and moved without change to its logic.
+That is the practical meaning of the claim in <<ch01>> that the language,
+not the processor, carries the system.

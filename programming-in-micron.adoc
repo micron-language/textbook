@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.3, 2026-09-12
+v0.4, 2026-09-20
 :toc:
 :toclevels: 2
 :numbered:
@@ -74,12 +74,22 @@ include::chapters/ch13_c_interop.adoc[]
 include::chapters/ch14_oakwood_modules.adoc[]
 include::chapters/ch15_screen_graphics.adoc[]
 
+=== Stepwise Refinement and Data Abstraction
+TBD
+
+=== Error Handling, FINALLY and Exceptions
+TBD
+
+
 
 [[part3]]
 [part]
 == Systems Programming — The Micron System
 
 Present the Micron System, a port of Niklaus Wirth and Jürg Gutknecht's Project Oberon (edition 2013) to Micron.
+
+include::chapters/ch18_machine_and_build.adoc[]
+include::chapters/ch19_kernel.adoc[]
 
 TBD
 
@@ -90,17 +100,8 @@ TBD
 TBD
 
 include::appendices/a_tools.adoc[]
-
-[[app-b]]
-[appendix]
-=== Micron System Design Notes
-TBD
-
-[[app-c]]
-[appendix]
-=== RISC5 vs. RV32
-TBD
-
+include::appendices/b_micron_system.adoc[]
+include::appendices/c_risc5_rv32.adoc[]
 include::appendices/d_reading_mil.adoc[]
 include::appendices/e_syntax.adoc[]
 include::appendices/f_predeclared.adoc[]
