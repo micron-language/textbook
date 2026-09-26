@@ -1,0 +1,148 @@
+[[ch20]]
+=== Disk, Files, Modules
+
+Above the Kernel sit the file system and the module machinery, `FileDir`, `Files` and `Modules`.
+Their design is Wirth's, chapter 7 of his book describes it, and the port changes nothing in it;
+what this chapter describes is the Micron in it:
+the sector arithmetic, the serialization rewritten in the unsigned domain,
+and what remains of `Modules` when there is nothing left to load.
+
+==== Sectors
+
+The Kernel exports the disk as numbered sectors of 1 KB.
+Wirth multiplies every sector number by 29, a prime,
+so that a corrupted or fabricated sector number is overwhelmingly unlikely to be
+divisible by 29 and is caught at the next use.
+In the original this check is `ASSERT(SYSTEM.H(0) = 0)`, reading the remainder
+register of the RISC-5 divider; Micron has `mod`, so the check says what it means:
+
+[source]
+----
+procedure GetSector*(src: int32; dst: pointer to array of byte)
+begin
+  assert(src mod 29 = 0)
+  src := src div 29
+  src := src * 2 + FSoffset
+  ReadSD(src, cast(AnyPtr, dst))
+  ReadSD(src + 1, @dst[512])
+end GetSector
+----
+
+The free sectors are kept in a bitmap, an `array of set`,
+and marking a sector is a set operation, `+ {sec mod 32}`, exactly as in the original;
+sets over machine words is one Oberon idea that transfers to Micron without any translation at all.
+
+==== The file directory and the unsigned domain
+
+`FileDir` implements Wirth's B-tree directory with the root page at sector 29;
+`Files` implements files as a head sector with a sector table,
+extension sectors and buffered riders.
+Structurally the modules correspond to the originals procedure for procedure.
+The interesting differences are all of one kind, 
+and <<ch03>>'s signedness discipline predicted them.
+
+Oberon has one integer type, so Wirth's serialization moves bytes through
+`CHR` and `ORD` and reinterprets freely.
+Micron distinguishes the signed number from the bit pattern,
+and the port works in the unsigned domain wherever bits are meant:
+
+[source]
+----
+procedure ReadInt*(R: ^Rider; x: ^int32)
+  var x0, x1, x2, x3: byte
+begin
+  ReadByte(R, @x0)
+  ReadByte(R, @x1)
+  ReadByte(R, @x2)
+  ReadByte(R, @x3)
+  x^ := sigc(shl(x3, 24) + shl(x2, 16) + shl(x1, 8) + x0)
+end ReadInt
+----
+
+The bytes are assembled with shifts in the unsigned domain and reinterpreted once,
+at the end, with `sigc`.
+The magic numbers of the directory show the other direction:
+
+[source]
+----
+DirMark*    = sigc(9B1EA38DH)
+HeaderMark* = sigc(9BA71D86H)
+----
+
+`9B1EA38DH` does not fit in an `int32` as a number, but the stored word is a bit
+pattern that happens to have the sign bit set, 
+so `sigc` states the reinterpretation where it happens, once, in the constant declaration.
+Which conversion to use, `sigc` to reinterpret, `sigl` or unary `+` to widen,
+`val` to change width, is the recurring decision when porting Oberon code,
+and <<ch21>> shows what happens when it is made wrongly.
+
+One allocation detail is worth noticing: `Files` allocates its buffers and file
+descriptors with `newgc`, so an abandoned, unregistered file is eventually
+reclaimed by the collector of the previous chapter, as in the original,
+where losing a file object is harmless by design.
+
+==== Modules without a loader
+
+In Wirth's system `Modules` is the dynamic loader: `ThisMod` reads a module's `.rsc` file,
+allocates its blocks, relocates its code and runs its body.
+In the Micron System all 27 modules are linked statically and their bodies have run before `Main` (<<ch18>>), 
+so `Modules` keeps its interface and loses its purpose:
+
+[source]
+----
+procedure Load*(const name: pointer to array of char; newmod: ^Module)
+  // all modules are linked statically and their bodies have run
+  var mod_: Module
+begin
+  mod_ := root
+  res := 0
+  while (mod_ # nil) & (name^ # mod_.name) do
+    mod_ := mod_.next
+  end
+  if mod_ = nil then
+    error(2, name)
+  end
+  newmod^ := mod_
+end Load
+----
+
+`Load` finds the descriptor of an already linked module and creates it on demand,
+since no boot linker generated one; `Free` removes descriptors without unloading anything;
+and commands live in the table `cmdTab` that `Main` filled at startup,
+each a procedure value rather than an entry-table address.
+The descriptor record `ModuleDesc` keeps all of Wirth's fields, including those
+only a loader would use, so the correspondence to his book remains visible.
+`Modules.res` is 0 on success and a small documented number otherwise, 
+with `importing` naming the culprit.
+
+A small Micron lesson hides in `ThisCommand`.
+Wirth bounds his loop with `LEN(mod.cmds^)`, 
+the intrinsic length of an Oberon dynamic array; 
+a Micron dynamic array is typed memory with no length (<<ch06>>),
+so the port ends the table with a sentinel entry instead:
+
+[source]
+----
+// Oberon: WHILE (res # 0) & (i < LEN(mod.cmds^)) DO; micc has no LEN for a
+// dynamic array, so the command list ends with an empty name
+while (res # 0) & (mod_.cmds[i].name[0] # 0X) do
+----
+
+The sentinel also gives the table a well-defined end for a future precise
+collector, which would need to know where the pointers stop.
+
+==== What dynamic loading would take
+
+Nothing in the language forbids a real loader; it's all in the object format.
+A dynamically loadable module needs its code and data in a relocatable form,
+a list of the addresses to fix up against the already loaded modules,
+and a table of its own entry points, which is what Wirth's `.rsc` format,
+his loader in `Modules` and the fingerprints in the symbol files provide.
+`micc` compiles to MIL and links statically; 
+a port of Wirth's scheme would define an analogous format for MIL-compiled code and reinstate `ThisFile`,
+whose skeleton the module still carries.
+The port leaves this as an outlook, deliberately: 
+the system it serves fits in one linked image, and the book's subject is the language, not a loader.
+
+The next chapter turns to the screen: the display driver, the input devices,
+and the viewer machinery above them.

@@ -1,0 +1,237 @@
+[[ch22]]
+=== Texts, Fonts and the Editor
+
+The text system is the largest subsystem of the Micron System,
+`Texts`, `Fonts`, `TextFrames`, `MenuViewers` and `Edit`, almost 3000 lines,
+and the part every user touches: in Oberon, text is the user interface.
+For this book it is a showcase for different language features: garbage-collected data structures,
+objects with inheritance used three different ways,
+and the model-view separation that Wirth built from one procedure variable.
+
+==== Texts: the piece list
+
+A `Text` never stores characters.
+It stores a doubly linked ring of pieces, each pointing into a file:
+
+[source]
+----
+PieceDesc = record
+  f: Files.File
+  off: int32
+  len_: int32
+  fnt: Fonts.Font
+  col: int32
+  voff: int32
+  prev: Piece
+  next: Piece
+end
+----
+
+Editing never moves text: an insertion splits a piece and links in new ones,
+a deletion unlinks a run of pieces, and the characters themselves stay in the files they came from,
+the original one and the unnamed scratch files that writers append typed input to.
+The following example makes the invariant visible: 
+the text the user sees is the concatenation of the pieces in ring order, 
+while the characters sit unmoved in two files.
+After inserting the word `not ` in the middle of a sentence read from `doc`,
+the ring holds three pieces where one was before:
+
+.A text after one insertion: three pieces, two files, no character moved
+----
+shown text: "this is not character soup"
+
+text ring:  [doc, off 0, len 8] -> [scratch, off 0, len 4] -> [doc, off 8, len 14]
+
+file doc:      "this is character soup"    (untouched)
+                ^       ^
+                off 0   off 8
+file scratch:  "not "
+----
+
+Deleting undoes nothing in the files either; it only unlinks pieces.
+This is the piece list, the data structure behind many editors since;
+`SplitPiece` and `FindPiece`, with its one-piece cache in the `Text`,
+together fit on a page.
+
+Like the file buffers of <<ch20>>, pieces are allocated with `newgc` (<<ch08>>) and never freed,
+but here at a different rate: an editing session produces garbage at typing speed,
+and the collector of <<ch19>>, run between commands by the loop of <<ch21>>,
+is what makes the design affordable.
+Writing the same module with manual disposal would mean reference counting the
+pieces shared between a text and the buffers moving text around.
+
+==== Readers, Scanners, Writers
+
+Access to a text goes through objects:
+
+[source]
+----
+Reader* = object
+  eot*: boolean
+  fnt*: Fonts.Font
+  col*: int32
+  voff*: int32
+  ref: Piece
+  org: int32
+  off: int32
+  rider: Files.Rider
+end
+
+Scanner* = object (Reader)
+  nextCh*: char
+  line*: int32
+  class*: int32
+  i*: int32
+  x*: real
+  ...
+end
+----
+
+`Scanner` extends `Reader` with the fields of a lexical scanner:
+`Texts.Scan` reads names, numbers, strings and special characters,
+and it is the same scanner for everyone, 
+the reason every Oberon command parses its parameters the same way.
+Note what this inheritance is for: reuse of data and procedures,
+not dynamic dispatch; nothing here is overridden.
+`Writer` accumulates output in a buffer, and its `WriteInt`,
+`WriteHex` and `WriteReal` are where the formatting lives
+that `println` provided in the hosted chapters.
+
+The serialization of a text block reads its bytes with the conversions of <<ch20>>,
+and one line shows all three intents side by side.
+A font number is a small count, widened with `+`;
+a vertical offset is a signed byte:
+
+[source]
+----
+q.col := +bt
+q.voff := cast(int8, bt) // the byte is a signed offset
+----
+
+==== Fonts
+
+A font file is parsed once into a `FontDesc`:
+metrics, a table of 128 glyph pointers, and a raster area of 2360 bytes.
+Some fonts need more, and the module covers them with a subtype:
+
+[source]
+----
+LargeFontDesc = object (FontDesc)
+  ext: array 2560 of byte // enlarges the raster of the base type
+end
+----
+
+Inheritance is used here for its memory layout alone:
+a `LargeFontDesc` is a `FontDesc` whose raster runs over into the extension,
+no method, no dispatch, just the guarantee that the extension lies behind the base fields.
+`Fonts.GetPat` hands a glyph to `Display.CopyPattern` by address, `patadr^ := @g.w`, 
+because a glyph stores width, height and raster lines in exactly the `Pattern` layout of <<ch21>>;
+this is also why `Fonts` imports `Display`, for the `Pattern` type.
+
+==== TextFrames: the view
+
+`TextFrames` renders a text into a frame and edits it with the caret and the selection.
+Its connection to `Texts` is one procedure variable, the notifier:
+a text knows nothing about frames, but calls `T.notify` after every change,
+and the display side installs:
+
+[source]
+----
+procedure NotifyDisplay*(T: Texts.Text; op: Texts.Op; beg, end_: int32)
+  var M: UpdateMsg
+begin
+  M.id := op
+  M.text := T
+  M.beg := beg
+  M.end_ := end_
+  Viewers.Broadcast(@M)
+end NotifyDisplay
+----
+
+The change becomes an `UpdateMsg` broadcast to every frame on the screen,
+and each frame showing that text repairs itself.
+Two frames on the same text stay consistent with no observer list and no registration: 
+model to notifier to broadcast to type case.
+The receiving end is `TextFrames.Handle`, the largest handler of the system
+and the full picture of the dispatch style of <<ch09>>:
+
+[source]
+----
+procedure Handle*(F: Display.Frame; M: ^Display.FrameMsg)
+  var F1: Frame
+begin
+  case F of
+  | Frame: // Oberon 90's WITH F: Frame DO
+    case M of
+    | Oberon.PInputMsg:
+      if M.id = Oberon.track then
+        Edit(F, M.X, M.Y, M.keys)
+      elsif M.id = Oberon.consume then
+        ...
+    | Oberon.PControlMsg:
+      ...
+    | Oberon.PSelectionMsg:
+      GetSelection(F, @M.text, @M.beg, @M.end_, @M.time)
+    | Oberon.PCopyMsg:
+      ...
+    | MenuViewers.PModifyMsg:
+      ...
+    | PUpdateMsg:
+      if F.text = M.text then
+        Update(F, M)
+      end
+    end
+  end
+end Handle
+----
+
+One procedure receives everything the frame can experience:
+input, defocus, the selection query, copying, resizing, text updates.
+Messages it does not name fall through the type case and are ignored,
+which is the extension guarantee of <<ch21>> seen from the receiving side.
+`TextFrames.Call` closes the circle to <<ch18>>:
+a middle click scans the name under the cursor and hands it to `Oberon.Call`,
+which finds the registered command; every text on the screen is also a menu.
+
+==== MenuViewers and Edit
+
+A `MenuViewers.Viewer` stacks two frames, a menu bar and a main frame,
+and routes messages between them; its `Handle` translates a viewer-level `modify`
+into `ModifyMsg` messages for the two children.
+On top of all this, the editor is small.
+`Edit.Open` is the whole procedure that opens a named text in a new viewer:
+
+[source]
+----
+procedure Open*()
+  var T: Texts.Text
+    S: Texts.Scanner
+    V: Viewers.Viewer
+    X, Y, beg, end_, time: int32
+begin
+  Texts.OpenScanner(@S, Oberon.Par.text, Oberon.Par.pos)
+  Texts.Scan(@S)
+  ...
+  if S.class = Texts.Name then
+    Oberon.AllocateUserViewer(Oberon.Par.vwr.X, @X, @Y)
+    V := MenuViewers.New(TextFrames.NewMenu(@S.s, StandardMenu),
+      TextFrames.NewText(TextFrames.Text(@S.s), 0), TextFrames.menuH, X, Y)
+  end
+end Open
+----
+
+It scans its parameter, allocates a screen position,
+and composes a viewer from a menu frame and a text frame.
+There is no editor object and no application class;
+the "editor" is the sum of `Texts` (the model), `TextFrames` (the view and the
+interaction) and a handful of commands like this one,
+each callable from any text on the screen.
+The `StandardMenu` string, `"System.Close System.Copy System.Grow Edit.Search
+Edit.Store"`, is itself just a text whose words happen to be commands.
+
+What the text system demonstrates, beyond its own machinery,
+is how far the middle of the language carries:
+pieces and buffers need level 5, the handlers need the objects of level 4,
+and everything else, notifiers, riders, scanners, menu composition,
+is procedure variables, records and modules, available from level 1.
+The next chapter turns to the graphics editor, where the same frame becomes a drawing surface.

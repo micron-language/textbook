@@ -12,6 +12,8 @@ Planned content:
 
 The text is published incrementally, as the chapters are written/reviewed.
 
+Here is a preliminary PDF: http://software.rochus-keller.ch/micron-textbook.pdf
+
 Comments, corrections and questions are welcome; please use the issue tracker.
 
 

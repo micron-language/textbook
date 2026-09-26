@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.4, 2026-09-20
+v0.5, 2026-09-26
 :toc:
 :toclevels: 2
 :numbered:
@@ -90,6 +90,9 @@ Present the Micron System, a port of Niklaus Wirth and Jürg Gutknecht's Project
 
 include::chapters/ch18_machine_and_build.adoc[]
 include::chapters/ch19_kernel.adoc[]
+include::chapters/ch20_disk_files_modules.adoc[]
+include::chapters/ch21_display_input_viewers.adoc[]
+include::chapters/ch22_texts_fonts_editor.adoc[]
 
 TBD
 

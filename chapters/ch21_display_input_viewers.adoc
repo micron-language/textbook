@@ -1,0 +1,190 @@
+[[ch21]]
+=== Display, Input, Viewers
+
+This chapter reaches the screen.
+`Display` draws into the frame buffer, `Input` reads the mouse and the keyboard,
+and `Viewers` tiles the screen into the frames that make Oberon's user interface.
+It is also where the Wirth OO from <<ch09>> transitions from a concept to a functional system.
+
+==== The frame buffer
+
+The display is one bit per pixel, and `Display` sees it as memory:
+a `Words` value, `pointer to set`, addresses 32 pixels of a display line.
+The base address comes from the boot header of <<ch18>> rather than from Wirth's fixed `0E7F00H`, 
+and everything else is address arithmetic:
+
+[source]
+----
+procedure adr(x, y: int32): Words inline
+  // the display word which holds the pixel x, y
+begin
+  return ptroff(Base, y * L + word(x))
+end adr
+----
+
+Declaring the display word as a `set` is Wirth's insight, and it survives the port unchanged:
+setting a pixel is set union, inverting is symmetric difference, clearing is set difference,
+and the three drawing modes of the whole system,
+`paint`, `invert` and `replace`, are exactly the three operations:
+
+[source]
+----
+procedure Dot*(col, x, y, mode: int32)
+  var a: Words; s: set
+begin
+  a := adr(x, y)
+  s := {obmod(x, W)}
+  if mode = paint then
+    a^ := a^ + s
+  elsif mode = invert then
+    a^ := a^ / s
+  ...
+end Dot
+----
+
+Two details show the arithmetic discipline of <<ch03>> at work.
+The coordinates use `obdiv` and `obmod`, the flooring division of Oberon,
+because a clipped frame can hand in a negative x, and `-1 div 32` must be `-1`,
+not `0`, to land in the display word to the left.
+And where a pattern line is shifted across a word boundary,
+the code works on `uint32` bit patterns and converts once,
+with `bset` to reenter the set domain:
+
+[source]
+----
+a^ := a^ + bset(shl(pwd, usig(k)))
+if k + w > W then // spill over
+  ptroff(a, 1)^ := ptroff(a, 1)^ + bset(shr(pwd, usig(W - k)))
+end
+----
+
+A `Pattern` is a `pointer to byte`: width, height, then the raster bytes.
+`CopyPattern` reads the header with the widening conversion,
+`w := +patadr^`, unary `+` because the first byte represents the width.
+This is the conversion whose confusion with reinterpretation, `sigc`,
+broke four modules during the port: a glyph metric, a pattern size or a key code
+of 128 or more silently turns negative when reinterpreted,
+and the symptom appears far from the cause, as garbled characters or a dead key.
+
+==== Input
+
+`Input` polls the mouse and keyboard registers of the machine:
+
+[source]
+----
+procedure Mouse*(keys: ^set; x, y: ^int32)
+  var w: int32
+begin
+  w := Int32Ptr{msAdr}^
+  keys^ := bset(usig(w div 16777216 mod 8))
+  x^ := w mod 1024
+  y^ := w div 4096 mod 1024
+  ...
+end Mouse
+----
+
+The mouse state is one machine word, 
+fields extracted with division and modulus by powers of two, as in the original.
+The keyboard delivers PS/2 scan codes which a table maps to characters;
+the lookup carries the war story of the previous paragraph in one line:
+
+[source]
+----
+ch^ := cast(CharPtr, ptroff(KTabAdr, +ord(kbdCode)))^
+----
+
+The `+` widens the code to a non-negative index.
+With the reinterpretation instead, every code at and above 128,
+which `Read` produces for every shifted key, would index backwards from the table.
+
+==== Viewers and the message hierarchy
+
+`Viewers` tiles the screen into tracks and viewers, Wirth's design unchanged:
+the screen is divided into vertical _tracks_, each track into a stack of
+_viewers_, and no window ever overlaps another.
+The data structure behind the tiling is a two-level ring of frames,
+anchored in one filler viewer per track:
+
+.The tiled display and the frame rings that describe it
+----
+screen                          data structure
++--------------+-------+
+|              | tool  |        Track ring: T1 -> T2 -> T1
+|   document   +-------+          |            |
+|   viewer     | log   |          v dsc        v dsc
+|              |       |        viewer ring   viewer ring
++--------------+-------+        doc -> filler tool -> log -> filler
+     T1           T2
+----
+
+Every element of both rings is a `Frame`; 
+a track's `dsc` field refers to its viewer ring, 
+and heights adjust so that a track's viewers always cover it exactly,
+which is what makes redraws local and cheap.
+For this book the module's main interest is that it is the root of the
+system's message hierarchy, the Wirth OO of <<ch09>> in production.
+`Display` declares the base object and the handler type:
+
+[source]
+----
+FrameMsg* = object
+end
+Handler* = procedure(F: Frame; M: pointer to FrameMsg)
+FrameDesc* = object
+  next*, dsc*: Frame
+  X*, Y*, W*, H*: int32
+  handle*: Handler
+end
+----
+
+and every layer above extends `FrameMsg` with the messages it defines:
+`Viewers.ViewerMsg` for restore, modify and suspend;
+`Oberon.InputMsg` for keys and characters.
+A frame knows one procedure, its handler; 
+a handler narrows the received message with the type case of <<ch09>> and ignores what it does not know.
+That last property is the extensibility argument:
+a new message type extends `FrameMsg`, and it is sent to whoever listens,
+and every existing handler remains correct without recompilation.
+
+==== The central loop
+
+`Oberon.Loop` is the whole scheduler of the system:
+
+[source]
+----
+repeat
+  Input.Mouse(@keys, @X, @Y)
+  if Input.Available() > 0 then
+    Input.Read(@ch)
+    ...
+    M.id := consume
+    M.ch := ch
+    FocusViewer.handle(FocusViewer, @M)
+  elsif keys # {} then
+    M.id := track
+    ...
+    V := Viewers.This(M.X, M.Y)
+    V.handle(V, @M)
+  else
+    ...
+    CurTask := CurTask.next
+    t := Kernel.Time()
+    if t >= CurTask.nextTime then
+      CurTask.handle()
+    end
+  end
+until false
+----
+
+A keystroke becomes an `InputMsg` with id `consume` sent to the focus viewer;
+mouse activity becomes `track` messages sent to the viewer under the cursor;
+and an idle loop iteration runs one background task,
+among them the garbage collector of <<ch19>>.
+There is no preemption and no process: a command runs to completion in the loop,
+which is why the collector may scan the whole stack between commands,
+and why a looping command hangs the system, a trade Wirth documents and accepts.
+The loop dispatches on procedure values from bottom to top:
+`CurTask.handle`, `V.handle`, and inside the handlers the type case on the message,
+three mechanisms from <<part2>> and not one of them a virtual method table.
+
+The next chapter climbs into the text system, where the same messages carry an editor.
