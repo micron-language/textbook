@@ -1,0 +1,168 @@
+[[ch23]]
+=== Graphics and Applications
+
+The last layer of the Micron System is what a user would call the applications:
+the line drawing editor Draw, built on `Graphics` and `GraphicFrames`,
+and the small demonstration programs, Hilbert, Sierpinski, Stars and the Hennessy benchmark suite.
+Draw is the second object-oriented framework of the system,
+and the more radical one: where the text system dispatches on message types,
+Draw also dispatches on object classes that the framework has never heard of.
+
+==== Graphics: objects with a method suite
+
+A drawing is a list of objects:
+
+[source]
+----
+ObjectDesc* = object
+  x*, y*, w*, h*: int32
+  col*: byte
+  selected*, marked*: boolean
+  do_*: Method
+  next: Object
+end
+----
+
+Every object carries `do_`, a pointer to its method suite:
+
+[source]
+----
+MethodDesc* = record
+  module_*: Name
+  allocator*: Name
+  new_*: Modules.Command
+  copy_*: procedure(from: Object; to_: Object)
+  draw*: Handler
+  change*: Handler
+  selectable*: procedure(obj: Object; x: int32; y: int32): boolean
+  read*: procedure(obj: Object; R: pointer to Files.Rider; C: pointer to Context)
+  write*: procedure(obj: Object; cno: int32; R: pointer to Files.Rider; C: pointer to Context)
+  print_*: procedure(obj: Object; x: int32; y: int32)
+end
+----
+
+This is a virtual method table written by hand: 
+one record of procedure variables per class, one pointer per object.
+It is worth pausing on what that buys over the `object` dispatch of <<ch09>>.
+Bound procedures dispatch on operations fixed in the type declaration;
+a method suite is a value, built at run time, shared by all instances of a class,
+and extensible by modules the framework does not import.
+The framework operates on it blindly:
+
+[source]
+----
+procedure Draw*(G: Graph; M: ^Msg)
+  var obj: Object
+begin
+  obj := G.first
+  while obj # nil do
+    obj.do_.draw(obj, M)
+    obj := obj.next
+  end
+end Draw
+----
+
+`Graphics` knows lines, captions and macros;
+everything else comes from outside.
+
+==== Rectangles: a new class in one module
+
+`Rectangles` adds a class to Draw without any module of Draw importing it.
+The new object type extends `ObjectDesc`,
+and the module body builds the method suite once:
+
+[source]
+----
+RectDesc* = object (Graphics.ObjectDesc)
+  lw*: int32
+  vers*: int32
+end
+...
+begin
+  newgc(method)
+  copy(@method.module_, "Rectangles", Graphics.NameLen)
+  copy(@method.allocator, "New", Graphics.NameLen)
+  ...
+----
+
+Its `Draw` handler narrows the received message with the type case,
+and its `Copy` narrows the object with type guards:
+
+[source]
+----
+dst(Rectangle).lw := src(Rectangle).lw
+dst(Rectangle).vers := src(Rectangle).vers
+----
+
+The guard `dst(Rectangle)` asserts and checks that this `Graphics.Object` is a `Rectangle`;
+inside its own class module the assertion holds by construction.
+Both dispatch directions of Wirth OO meet here:
+the method suite selects the class procedure, the type case inside the
+procedure selects the message.
+
+The method suite carries two names, `module_` and `allocator`,
+and they are what makes a drawing file portable across programs:
+`Graphics.Store` writes `"Rectangles"` and `"New"` next to the objects of the
+class, and `Graphics.Load` resolves them at load time:
+
+[source]
+----
+Modules.Load(module_, @mod_)
+com^ := Modules.ThisCommand(mod_, allocator)
+----
+
+In the original system this loads the module from disk;
+in the statically linked port, `Modules.Load` of <<ch20>> finds the already linked module,
+and the file format keeps working unchanged.
+A class is named by a command, the same `M.P` convention that runs the system,
+now used as a serialization format.
+
+==== Draw: commands over a shared model
+
+`Draw` itself is, like `Edit` in <<ch22>>, thin:
+a set of commands, `Draw.Open`, `Draw.SetWidth`, `Draw.ChangeColor`,
+`Draw.Macro`, operating on the focused `GraphicFrames.Frame`.
+`GraphicFrames` mirrors `TextFrames`:
+it extends `Display.FrameMsg` with its own update messages,
+broadcasts changes so that two viewers on one drawing stay consistent,
+and translates a `Graphics.Msg` into screen coordinates by adding the frame
+origin before handing it to the objects.
+Nothing in this layering is new; that is the observation worth making.
+The mechanisms of chapters <<ch21>> and <<ch22>> carry a second,
+structurally different application without modification.
+
+==== The small programs
+
+The remaining applications fit in a page each and each shows one trait.
+Hilbert and Sierpinski draw recursive curves directly onto the display;
+Wirth expresses the four mutually recursive curve parts with procedure variables:
+
+[source]
+----
+var
+  A, B, C, D: procedure(i: int32)
+
+procedure HA(i: int32)
+begin
+  if i > 0 then
+    D(i - 1); W(); A(i - 1); S(); A(i - 1); E(); B(i - 1)
+  end
+end HA
+...
+A := HA; B := HB; C := HC; D := HD
+----
+
+In Micron the forward declaration of <<ch05>> would do,
+but the port keeps Wirth's formulation, which needs no language support at all:
+mutual recursion as data.
+Stars animates through an `Oberon` background task, 
+`Stars.Run` installs it and `Stars.Stop` removes it, 
+the task mechanism of <<ch21>> used from application code.
+Hennessy <<TBD>>, the classic benchmark collection, 
+times its computations with `Oberon.Time` and prints through `Texts`;
+it is also the module to copy from when measuring anything in the system.
+
+With it the tour of the Micron System is complete:
+from the boot header to a benchmark suite, every line in Micron,
+every mechanism one of those introduced in <<part2>>.
+The next chapter leaves the system and looks at what else has been written in the language.

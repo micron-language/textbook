@@ -1,0 +1,118 @@
+[[ch09]]
+=== Object-Oriented Programming
+
+<<ch07>> built abstraction from records, delegates and interfaces, all without inheritance
+and mostly without dynamic dispatch.
+Level 4 adds the remaining pair: object types with inheritance, and type-bound procedures that dispatch
+on the dynamic type.
+This chapter shows the machinery, and then returns to the question of <<ch07>>:
+when is this the right tool, and in which of two quite different styles.
+
+==== Object types
+
+An object type is declared like a record, with an optional base type in parentheses:
+
+[source]
+----
+include::../examples/ch09/Figures.mic[tag=objects]
+----
+
+`CircleDesc` and `BoxDesc` are extensions of `FigureDesc`: each consists of the inherited fields
+followed by its own.
+A pointer to an extension is assignable to a pointer of the base type, so a `Circle` may stand
+wherever a `Figure` is expected.
+This is the subtype relation that records deliberately lack;
+whether a type participates in it is decided by writing `object` or `record`, and is visible at the declaration.
+
+Procedures are bound to an object type in either of two equivalent notations.
+The example uses the traditional Oberon-2 receiver syntax <<R7>>, where the receiver is a named
+parameter in front of the procedure name, `procedure (f: Figure) area(): integer`,
+and the body refers to it by that name.
+The bound syntax of <<ch07>>, `procedure Figure.area(): integer` with the implicit
+receiver `self`, is equally valid for object types. Which to use is a matter of taste;
+Micron prefers the latter; the traditional Oberon-2 syntax is meant for backward compatibility.
+
+The difference to the record-bound procedures of <<ch07>> is dispatch:
+a procedure bound to an object type is implicitly bound to every extension,
+an extension may override it with a redefinition whose parameters match,
+and a call `f.area()` executes the procedure bound to the _dynamic_ type of `f`,
+which the compiler resolves through a method table at run time.
+In the example, the same statement `f.area()` computes a circle area or a box area,
+depending on what `f` points to at that moment.
+Within a redefinition, `self.area^()` calls the overridden procedure of the base type,
+the _super call_ of other languages.
+
+==== Type tests, guards and type case
+
+Assignments narrow static knowledge: after `f := c`, the variable `f` is statically a `Figure`,
+although it points to a circle.
+Three constructs recover the information, all checked:
+
+- The test `f is Box` yields true if the dynamic type of `f` is `Box` or an extension of it.
+- The guard `f(Box)` asserts the dynamic type and gives the designator the static type `Box`;
+  a failing guard aborts the program.
+- The type `case` branches on the dynamic type, and within each arm the case variable
+  is known with the tested type:
+
+[source]
+----
+include::../examples/ch09/Figures.mic[tag=describe]
+----
+
+[source]
+----
+include::../examples/ch09/Figures.mic[tag=istest]
+----
+
+The `nil` label handles the empty pointer in the same statement.
+This is the mechanism Oberon used instead of pattern matching, and for systems code it has aged well:
+the tests are explicit, cheap and local, and the compiler checks that each label is an extension of the
+case variable's type.
+
+==== Two styles of object orientation
+
+The literature tends to present object orientation as one thing.
+The Oberon lineage suggests distinguishing two styles, and Micron supports both.
+
+The first, which this book calls _Simula OO_, is the familiar one: business objects, class hierarchies,
+virtual dispatch.
+An extension inherits fields and procedures, overrides some, and clients program against the base type.
+The `Figures` example is Simula OO in miniature, and for data that is genuinely hierarchical,
+a scene graph, an instruction set, a widget tree, it remains the most direct expression available.
+
+The second, _Wirth OO_, appears throughout Project Oberon <<R2>> and its Micron port:
+a record carries a procedure variable, the _handler_,
+and components communicate by sending messages through it.
+Inheritance is involved, but on the message side: the message types form a hierarchy
+rooted in a most general message type, and a handler takes that base type as its parameter,
+
+[source]
+----
+Handler* = procedure(F: Frame; M: pointer to FrameMsg)
+----
+
+and recovers the concrete message with the constructs of the previous section,
+a type `case`, an `is` test or a type guard on the dynamic message type.
+The call through the handler is an ordinary procedure-variable call;
+extension happens by adding message types and by wrapping or replacing handlers at run time.
+<<ch21>> shows it at full scale in the viewer system, where frames of unknown, separately compiled types
+cooperate through one message protocol.
+
+The engineering trade-off is real.
+Simula OO gives static checking of the full procedure set and the fastest dispatch,
+but fixes the hierarchy at compile time.
+Wirth OO gives open protocols and late binding of behavior;
+the object's record type stays outside any hierarchy, only the messages inherit,
+but the compiler cannot enumerate what a handler understands,
+and unknown messages must be ignored by convention.
+Interface types (<<ch07>>) sit between the two: structural contracts, checked statically, no hierarchy.
+Micron provides all three, each at the lowest level that can support it, and <<part3>> demonstrates them.
+
+==== Objects and the heap
+
+Object types can live on the heap: `new(c)` allocates them like records, and level 4 presupposes level 3.
+Stack allocation is possible, and a bound procedure called on a stack object receives its address,
+as noted in <<ch07>>.
+The dynamic type information that `is`, guards and the type `case` consult is stored with the object;
+it is the one hidden field Micron adds, the price of dispatch, and it is paid only by object types.
+Records stay exactly as C would lay them out.

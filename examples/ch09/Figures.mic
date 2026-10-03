@@ -1,0 +1,73 @@
+module Figures [level = 4]
+
+// tag::objects[]
+type
+    Figure  = ^FigureDesc
+    FigureDesc = object
+                    x, y: integer
+                 end
+
+    Circle  = ^CircleDesc
+    CircleDesc = object (FigureDesc)
+                    radius: integer
+                 end
+
+    Box     = ^BoxDesc
+    BoxDesc = object (FigureDesc)
+                    w, h: integer
+              end
+
+procedure (f: Figure) area(): integer
+begin
+    return 0
+end area
+
+procedure (c: Circle) area(): integer   // redefinition
+begin
+    return 3 * c.radius * c.radius      // coarse
+end area
+
+procedure (b: Box) area(): integer      // redefinition
+begin
+    return b.w * b.h
+end area
+// end::objects[]
+
+// tag::describe[]
+procedure describe(f: Figure)
+begin
+    case f of
+    | Circle: print("circle r="); print(f.radius)
+    | Box:    print("box ");      print(f.w); print("x"); print(f.h)
+    | NIL:    print("nothing")
+    else      print("figure")
+    end
+    if f # nil then print(" area="); print(f.area()) end
+    println("")
+end describe
+// end::describe[]
+
+var
+    c: Circle
+    b: Box
+    f: Figure
+
+begin
+    new(c); c.x := 0; c.y := 0; c.radius := 5
+    new(b); b.x := 1; b.y := 1; b.w := 4; b.h := 3
+
+    f := c
+    println(f.area())       // 75, dispatched to Circle.area
+    f := b
+    println(f.area())       // 12, dispatched to Box.area
+
+    // tag::istest[]
+    if f is Box then println(f(Box).w) end     // 4
+    // end::istest[]
+
+    describe(c)             // circle r=5 area=75
+    describe(b)             // box 4x3 area=12
+    describe(nil)           // nothing
+
+    dispose(c); dispose(b)
+end Figures

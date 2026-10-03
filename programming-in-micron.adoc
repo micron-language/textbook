@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.5, 2026-09-26
+v0.6, 2026-10-03
 :toc:
 :toclevels: 2
 :numbered:
@@ -58,11 +58,7 @@ include::chapters/ch05_program_structure.adoc[]
 include::chapters/ch06_structured_types.adoc[]
 include::chapters/ch07_abstraction_without_oop.adoc[]
 include::chapters/ch08_dynamic_memory.adoc[]
-
-[[ch09]]
-=== Object-Oriented Programming
-TBD
-
+include::chapters/ch09_oop.adoc[]
 include::chapters/ch10_generic_modules.adoc[]
 
 [[ch11]]
@@ -93,8 +89,7 @@ include::chapters/ch19_kernel.adoc[]
 include::chapters/ch20_disk_files_modules.adoc[]
 include::chapters/ch21_display_input_viewers.adoc[]
 include::chapters/ch22_texts_fonts_editor.adoc[]
-
-TBD
+include::chapters/ch23_graphics_applications.adoc[]
 
 [[part4]]
 [part]
