@@ -1,0 +1,148 @@
+[[ch24]]
+=== Case Studies Beyond the System
+
+The Micron System shows what the language does on a bare machine.
+This closing chapter looks at the other large programs written in Micron so far, 
+all of them ports of well-documented originals, chosen so that a reader
+can hold the Micron text against a book that explains it line by line.
+They are hosted programs, compiled with `--run` or linked against a C library,
+and they exercise a different profile than an operating system:
+long-lived interpreters, compilers, and a benchmark suite.
+All of them ship with the Micron or related repositories.
+
+==== S9: a Scheme system
+
+S9fES, Scheme 9 from Empty Space <<R6>>, is Nils M Holm's Scheme interpreter,
+written in C and explained in his book of the same name.
+The Micron port keeps the original function and variable names,
+and the logic inside the procedures nearly line for line,
+so the book explains the Micron text as well as the C text.
+Nine modules, about 7500 lines, all at level 3.
+
+Level 3 deserves a remark: a Scheme system lives on garbage collection,
+yet the port does not use `newgc`.
+It follows the original design instead, where a cell is an index:
+
+[source]
+----
+cell* = int
+----
+
+The heap is a set of parallel arrays, `Car`, `Cdr` and `Tag`,
+and the collector is S9's own mark and sweep over them,
+with an explicit root array and an explicit shadow stack
+(`M.save`, `M.unsave`) protecting intermediate results,
+exactly the discipline that <<ch08>> described for manual memory
+and that a C implementation of an interpreter has to follow anyway.
+A managed language is implemented here in an unmanaged one,
+which is the same relation as `Kernel` to the system in <<ch19>>, one level down.
+
+S9's reader is also where `goto` earns the place that <<ch05>> reserved for it:
+the scanner leaves its nested loops with `goto num_done`, `goto real_frac_done` and their kin,
+as the C original does, and restructuring them into flags would move the
+Micron text away from the book that documents it.
+
+==== P4: the portable Pascal compiler
+
+P4 is the 1976 portable Pascal compiler of Nori, Ammann et al. <<R4>>,
+in the source form documented by Pemberton and Daniels;
+it compiles Pascal to P-code and interprets it.
+The Micron port stays faithful to the original,
+and the original line numbers are referenced in comments,
+so the Pemberton and Daniels book works as its commentary.
+
+Its interest for this book is the Pascal heritage coming full circle,
+and one feature in production use: the variant records of <<ch06>>.
+P4's central data structures are Pascal variant records,
+and they translate directly:
+
+[source]
+----
+StructRec* = record
+  ...
+  case
+    | inline scalar_v*: record scalkind*: DeclKind; fconst*: Ctp end
+    | inline subrange_v*: record rangetype*: Stp; min*: Valu; max*: Valu end
+    ...
+end
+----
+
+Each variant is an inline record overlaying the others,
+which is what Pascal's `case` inside a record meant,
+without Pascal's undefined behavior when the tag and the access disagree.
+
+==== A Smalltalk-80 virtual machine
+
+The third study implements the Smalltalk-80 virtual machine after the "Blue Book",
+Goldberg and Robson's Smalltalk-80: The Language and its Implementation <<R3>>,
+whose part four specifies the VM precisely enough to code from.
+Three modules carry the design:
+`ObjectMemory`, which loads a Smalltalk-80 image into the object table and
+reclaims with mark and sweep where the Blue Book prescribes reference counting;
+`Interpreter`, the bytecode interpreter, the largest module at about 2900 lines;
+and `BitBlt`, the raster operation of chapter 18 of the Blue Book,
+a deliberate textbook transcription.
+Where S9 works with array indices, 
+the Smalltalk VM works with object pointers as 16-bit words,
+fields extracted with the shift and mask idioms of <<ch12>>,
+and the display is a bitmap driven by `BitBlt` alone.
+Smalltalk is the third object system in this book,
+after the two of the Micron System,
+and the most instructive one to compare: classes, 
+metaclasses and dynamic dispatch exist here purely as data in the object memory,
+interpreted by a program that itself uses no object orientation at all.
+
+==== Are We Fast Yet: one suite, four styles
+
+The awfy benchmark suite, derived from the SOM "Are We Fast Yet" benchmarks,
+exists in Micron in four parallel implementations of the same programs:
+
+- Procedural, derived from the C version, plain records and procedures;
+- Hybrid, with statically bound procedures and delegates (<<ch07>>);
+- Interfaces, where the benchmark harness sees each program through an interface;
+- Objects, the classical class-based form of <<ch09>>, at level 4.
+
+The object-oriented variant is the most direct descendant of the originals,
+which come from the Smalltalk worlds: every benchmark extends an
+abstract `Benchmark` object and overrides its hooks,
+
+[source]
+----
+Benchmark* = object end
+
+procedure Benchmark.benchmark*(): integer
+procedure Benchmark.verifyResult*(result: integer): boolean
+procedure Benchmark.innerBenchmarkLoop*(innerIterations: integer): boolean
+----
+
+and the harness runs whatever `getSuiteFromName` returns as a `pointer to Benchmark`,
+dispatching dynamically.
+Two of its choices are worth reading closely.
+First, it stays at level 4: instead of `newgc` there is a root object with a
+reference count and `addRef`/`release` bound procedures,
+and `release` calls a `deinit` hook before `dispose`, so every class frees what it owns.
+Object orientation does not imply a collector,
+and the ownership discipline of <<ch08>> carries over unchanged.
+Second, the collection library under `som/` crosses objects with the generic modules of <<ch10>>: 
+`Vector(T)` is a generic module whose element container is an object type,
+so `DeltaBlue` can extend `Vector(ConstraintPtr)` into its `Plan` class, 
+and the iteration interfaces (`ForEach`, `Test`, `Comparator`)
+are empty objects from a generic `Interfaces(T)` module that a caller extends locally,
+often as a type declared inside the using procedure.
+
+The suite is the ground for claims about cost:
+the same algorithms, the same structure, only the abstraction mechanism varies,
+so a measured difference is attributable to the mechanism.
+It is also the largest body of idiomatic application Micron outside the system, 
+and a good place to read how the styles of <<ch07>> and <<ch09>> look at scale.
+
+==== What the studies say
+
+Four programs, four profiles: an operating system on bare metal,
+two language implementations, a VM specified in a book, a benchmark suite.
+None of them needed a language extension, a compiler switch beyond the target, or an escape into C.
+That is the claim of <<ch01>>, tested:
+the language levels span the space from boot code to garbage-collected applications,
+and the programs that prove it can be read next to the books that explain them.
+
+

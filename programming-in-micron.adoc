@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.6, 2026-10-03
+v0.7, 2026-10-10
 :toc:
 :toclevels: 2
 :numbered:
@@ -41,11 +41,7 @@ TBD
 
 include::chapters/ch02_tour.adoc[]
 include::chapters/ch03_types_values.adoc[]
-
-[[ch04]]
-=== Coming from other languages
-
-TBD
+include::chapters/ch04_coming_from.adoc[]
 
 [[part2]]
 [part]
@@ -73,6 +69,7 @@ include::chapters/ch15_screen_graphics.adoc[]
 === Stepwise Refinement and Data Abstraction
 TBD
 
+[[ch17]]
 === Error Handling, FINALLY and Exceptions
 TBD
 
@@ -90,6 +87,7 @@ include::chapters/ch20_disk_files_modules.adoc[]
 include::chapters/ch21_display_input_viewers.adoc[]
 include::chapters/ch22_texts_fonts_editor.adoc[]
 include::chapters/ch23_graphics_applications.adoc[]
+include::chapters/ch24_case_studies.adoc[]
 
 [[part4]]
 [part]
@@ -104,10 +102,7 @@ include::appendices/d_reading_mil.adoc[]
 include::appendices/e_syntax.adoc[]
 include::appendices/f_predeclared.adoc[]
 include::appendices/g_language_levels.adoc[]
-
-[[app-h]]
-[appendix]
-=== Micron for C and Pascal Programmers
-TBD
-
+include::appendices/h_translation_tables.adoc[]
 include::appendices/i_bibliography.adoc[]
+
+

@@ -1,0 +1,173 @@
+[[ch04]]
+=== Micron for C, Pascal and Go Programmers
+
+The reader of this book already has programming experience.
+The next chapters present Micron systematically, feature by feature,
+and they are written to be read in order;
+this one is different in kind.
+It talks to three arrivals separately, in their own terms:
+what will feel familiar, what is genuinely different,
+and which habits are worth carrying across or leaving behind.
+<<app-h>> gives the same mapping as lookup tables;
+this chapter gives the reasoning.
+Readers may fairly skip the sections about languages they do not come from.
+
+==== If you come from C
+
+C and Micron agree on more than the surface suggests.
+Both are small languages that compile to predictable machine code;
+both let the programmer say exactly where data lives;
+both trust the programmer with pointers.
+A C programmer's mental model of the machine, frames, alignment, the cost
+of an indirection, transfers without change,
+and so does most of the working vocabulary:
+`int32`/`uint8` are the fixed-width types C99 spells `int32_t`/`uint8_t`,
+records lay out like structs, `div` and `mod` truncate exactly like
+`/` and `%`, and unsigned arithmetic wraps.
+Micron even has `goto`, kept deliberately so that C is easier to migrate.
+
+The first difference that bites is that _implicit conversions are gone_.
+C converts freely between integer types and lets the "usual arithmetic
+conversions" decide what a mixed expression means;
+four decades of subtle bugs, sign-extension surprises and compiler
+warnings testify to the price.
+In Micron, signed and unsigned are two separate families,
+mixing them in one expression is a compile-time error,
+and every crossing is written out: `usig` and `sigl` to move between
+families, `val` for value conversion, `cast` for bit reinterpretation.
+Expect your first Micron programs to be red with such errors;
+expect, after a week, to find the C rules harder to defend than you did.
+<<ch03>> presented the system in full.
+
+The second difference is where the discipline comes from.
+In C, hygiene is a matter of convention and tooling: `-Wall`, static
+analyzers, code review.
+Micron moves a useful part of that into the language.
+`const` on a parameter is transitive and cannot be cast away (<<ch05>>);
+a module exports exactly what carries a mark and nothing else (ibid.);
+pointer arithmetic exists but only by name, `ptroff`, never by accident;
+and the language levels (<<ch02>>) turn "this file must not allocate"
+from a review comment into a compiler check.
+None of this costs run-time performance, which is the point:
+the claim Micron makes against C is not that it is safer at a price,
+but that most of C's danger never paid for anything.
+
+What C programmers must actually give up is small: the preprocessor
+(imports are semantic, constants are `const`, conditional compilation is
+a source directive, <<ch11>>); the textual header file (the compiler
+extracts interfaces itself, <<ch05>>); variadic functions (an array
+argument takes their place, <<ch05>>); and `malloc`'s untyped bytes
+(`new` allocates a typed value, <<ch08>>).
+In exchange, the linker model becomes trivial, a build is `micc` on the
+root module (<<ch02>>), and the FFI chapter (<<ch13>>) shows that the C
+world stays one `extern C` declaration away, so nothing already built is
+lost.
+
+==== If you come from Pascal, Modula-2 or Oberon
+
+The Wirthian reader is at home immediately: modules with explicit
+import and export, strong typing, `begin`/`end` structure,
+nested procedures, and a compiler that is fast because the language was
+designed single-pass.
+Micron is a descendant of this line through Oberon+ and Luon,
+and <<ch01>> told that story.
+What this section owes the Pascal programmer is a candid list of the
+places where Micron chose differently, and why.
+
+Micron is _lower-level on purpose_.
+Pascal and Oberon describe an abstract machine and hide the real one;
+Micron's reason to exist is systems and embedded programming,
+so the real machine shows through where that is useful.
+Integer types have explicit widths instead of one `INTEGER`;
+records lay out C-compatibly; a pointer may address a stack variable,
+a module variable or the middle of an array, not only a heap record;
+and the lowest language level has neither heap nor stack,
+which is what startup code and tiny microcontrollers need.
+Where Oberon quarantined such things in the pseudo-module SYSTEM,
+Micron admits them openly, typed and named, and uses the level system
+rather than a module name to mark the code that needs review.
+
+Three concrete changes deserve their warning here.
+There are _no VAR parameters_: a procedure that modifies its argument
+takes a pointer, and the caller writes `count(@text, 'b')`,
+so every call site shows which arguments can change,
+information that in Pascal only the declaration has.
+`div` and `mod` truncate toward zero, following C and standard Pascal,
+not Oberon's floor semantics; `obdiv` and `obmod` are there when the
+Oberon behavior is wanted, and <<ch03>> explained why the default flipped.
+And garbage collection is not assumed: `new` pairs with `dispose`,
+and collected allocation is a separate, higher language level (`newgc`),
+chosen per module rather than imposed on the program.
+An Oberon programmer should read <<ch08>> before porting anything.
+
+What Micron gives back is the modern half of the family tree that
+classical Oberon refused: enumerations and variant records return
+(Pascal programmers never stopped missing them), constructors write
+structured constants in one line, generic modules (<<ch10>>) replace 
+the source-level template tricks once used for generic programming 
+in Modula-2, interfaces and objects (<<ch07>>, <<ch09>>) 
+give dynamic dispatch without requiring a class-centred programming model,
+and `finally` with `pcall` (<<ch17>>) covers the error-handling ground
+that FreePascal's `try` does, in a form a systems kernel can afford.
+The FreePascal programmer in particular will find the distance smaller
+than expected: most of what FPC added to Turbo Pascal exists here,
+usually in a leaner form.
+
+==== If you come from Go
+
+Go and Micron do not descend from one another,
+but they share ancestors and an attitude.
+The module/package with explicit exports, the composition-over-inheritance
+instinct, structural embedding of records, the refusal of implicit
+conversions between integer types, fast whole-program compilation:
+a Go programmer recognizes the Oberon inheritance in Go the moment
+Micron makes it visible again.
+Even the export mark is the same idea, spelled differently:
+Go capitalizes the identifier, Micron appends `*`,
+and Micron's `-` adds read-only export, which Go lacks.
+
+The real difference is the runtime, and it changes daily habits more
+than any syntax.
+Go's model is services: goroutines, channels, and a garbage collector
+that is always on; the language can be high-level because a scheduler
+and a collector are underneath everything.
+Micron's model is systems: there is no scheduler, no collector unless a
+module asks for one (level 5, `newgc`), no green stacks, and a program's
+memory behavior is decided by the program.
+Where a Go program says `go serve(c)`, a Micron program has an event
+loop it wrote itself (<<ch15>> builds one; the Micron System of <<part3>>
+is exactly such a loop grown into an operating system).
+Concurrency as a language feature is simply not part of Micron;
+what exists is what systems code always had, interrupts and explicit
+state machines.
+
+Smaller adjustments follow from the same divide.
+Slices become pointers to arrays whose length travels separately,
+so the convenient `len(s)` on a dynamic value is gone (<<ch06>>, <<ch08>>);
+strings are 0X-terminated char arrays, not immutable values;
+maps are a library data structure you choose or write, not syntax;
+`defer` becomes `finally`, once per procedure rather than per statement
+(<<ch17>>); and errors are return values by convention here as there,
+with `pcall` in the exceptional corner where Go would panic.
+Interfaces exist and are satisfied structurally exactly as in Go
+(<<ch07>>), but dispatch stays a visible mechanism a programmer can
+point at, not runtime magic.
+A Go programmer who has ever asked what the runtime does under a
+`pprof` graph will find in Micron the answer-by-construction:
+nothing the program did not write.
+
+==== Habits worth keeping, habits worth dropping
+
+The three sections meet in a short list.
+Keep from C the cost model and the respect for layout; drop the
+preprocessor artistry, the casts, and the assumption that every integer
+converts to every other.
+Keep from Pascal and Oberon the discipline of interfaces and the habit of letting
+the compiler check what can be checked; drop the expectation that the
+machine is hidden and that somebody else manages memory.
+Keep from Go the small-interface style and composition instinct;
+drop the assumption of an omnipresent runtime.
+What all three readers can rely on: the language is small enough to hold
+in one head, the compiler is fast enough to keep up with thought,
+and nothing happens at run time that the program text does not show.
+The systematic treatment starts on the next page.

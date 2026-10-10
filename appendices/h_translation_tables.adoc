@@ -1,0 +1,73 @@
+[[app-h]]
+[appendix]
+=== Micron for C and Pascal Programmers
+
+Two lookup tables for readers arriving from C or from Pascal/Oberon.
+They map constructs, not semantics; where a mapping is approximate,
+the chapter reference has the caveats.
+The prose companion to these tables is <<ch04>>.
+
+==== From C
+
+[cols="2,2,2",options="header"]
+|===
+|C |Micron |See
+
+|`int32_t`, `uint8_t` ... |`int32`, `uint8` ... |<<ch03>>
+|`unsigned` arithmetic wrap |same, in the unsigned family |<<ch03>>
+|implicit int conversions |none; `val`, `sigl`, `usig`, `sigc`, `cast` |<<ch03>>
+|`struct` |`record` |<<ch06>>
+|`union` |`case` variants in a record |<<ch06>>
+|bit fields |`bits` fields in a record |<<ch06>>
+|`enum` |enumeration type |<<ch03>>
+|`T*` |`pointer to T` (`^T`) |<<ch06>>
+|`void*` |`pointer to any` |<<ch06>>
+|`p->f`, `(*p).f` |`p.f` (auto dereference), `p^.f` |<<ch06>>
+|`p[i]` on a pointer |`p^[i]` on a pointer to array, or `ptroff` |<<ch06>>, <<ch12>>
+|pointer arithmetic |`ptroff(p, n)`, typed |<<ch12>>
+|`(T)x` cast |`cast(T, x)`, bit reinterpretation |<<ch12>>
+|function pointer |procedure type |<<ch06>>
+|`malloc`/`free` |`new`/`dispose` |<<ch08>>
+|`static` (file scope) |non-exported module declaration |<<ch05>>
+|`extern` |`extern` procedures/modules |<<ch13>>
+|`#include` |`import` (semantic, no text inclusion) |<<ch05>>
+|`#define` constant |`const` declaration |<<ch05>>
+|`#if`/`#ifdef` |source code directives `<* if *>` |<<ch11>>
+|`inline` |`inline` procedures |<<ch05>>
+|`constexpr` (C++) |`invar` procedures |<<ch11>>
+|`volatile` device access |pointer constructor to a device address |<<ch12>>
+|`goto` |`goto`, within a procedure |<<ch05>>
+|`x / y`, `x % y` (truncating) |`div`, `mod`, same truncating semantics |<<ch03>>
+|===
+
+==== From Pascal and Oberon
+
+[cols="2,2,2,2",options="header"]
+|===
+|Pascal (Turbo/Free) |Oberon-07 |Micron |See
+
+|`Integer`, `Byte`, `Cardinal` |`INTEGER`, `BYTE` |`int32`, `uint8`, `uint32`, both families explicit |<<ch03>>
+|`unit` / `interface` / `implementation` |`MODULE`, export mark `*` |`module`, export marks `*` and `-` |<<ch05>>
+|`uses` |`IMPORT` |`import`, with aliases |<<ch05>>
+|`record ... case ... end` |records, no variants |records with `case` variants |<<ch06>>
+|`packed record` |- |`bits` fields |<<ch06>>
+|`array [1..10] of T` |`ARRAY 10 OF T` (0-based) |`array 10 of T` (0-based) |<<ch06>>
+|dynamic array (FPC) |pointer to open array |`pointer to array of T`, no length metadata |<<ch08>>
+|`New`/`Dispose` |`NEW` (GC) |`new`/`dispose`; `newgc` for GC |<<ch08>>
+|nested procedures |nested procedures |nested procedures |<<ch05>>
+|`var` parameter |`VAR` parameter |pointer parameter; `@v` at the call |<<ch05>>
+|procedural type |procedure type |procedure type |<<ch06>>
+|method (object/class, FPC) |type-bound procedure (Oberon-2) |bound procedures and `object` methods, both receiver forms |<<ch07>>, <<ch09>>
+|class inheritance (FPC) |type extension |`object` extension, `is`, guards, type `case` |<<ch09>>
+|interfaces (FPC, COM-style) |- |`interface` types, no reference counting |<<ch07>>
+|generics (FPC) |- |generic modules with meta parameters |<<ch10>>
+|`try`/`finally` (FPC) |- |`finally` section per procedure |<<ch17>>
+|exceptions (FPC) |- |`pcall`/`raise`, optional |<<ch17>>
+|`div`/`mod` (truncating) |`DIV`/`MOD` (floor-style) |`div`/`mod` truncating as in Pascal; `obdiv`/`obmod` for the Oberon semantics |<<ch03>>
+|`absolute` (FPC) |SYSTEM.PUT/GET |pointer constructor `T{addr}` |<<ch12>>
+|`asm` blocks (FPC) |SYSTEM, code procedures |level 0: `inline`, `getreg`/`putreg` |<<ch12>>
+|===
+
+The largest non-syntactic differences for both audiences are the strict
+signed/unsigned separation (<<ch03>>), dynamic arrays without length
+metadata (<<ch08>>), and the language levels (<<app-g>>).
