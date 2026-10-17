@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.7, 2026-10-10
+v0.8, 2026-10-17
 :toc:
 :toclevels: 2
 :numbered:
@@ -35,10 +35,7 @@ This part explains why the Micron programming language exists, what using it loo
 and it lays down the vocabulary the rest of the book depends on.
 TBD
 
-[[ch01]]
-=== Why Micron?
-TBD
-
+include::chapters/ch01_why_micron.adoc[]
 include::chapters/ch02_tour.adoc[]
 include::chapters/ch03_types_values.adoc[]
 include::chapters/ch04_coming_from.adoc[]
@@ -65,9 +62,7 @@ include::chapters/ch12_low_level.adoc[]
 include::chapters/ch13_c_interop.adoc[]
 include::chapters/ch14_oakwood_modules.adoc[]
 include::chapters/ch15_screen_graphics.adoc[]
-
-=== Stepwise Refinement and Data Abstraction
-TBD
+include::chapters/ch16_stepwise_refinement.adoc[]
 
 [[ch17]]
 === Error Handling, FINALLY and Exceptions

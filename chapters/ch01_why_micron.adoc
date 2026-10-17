@@ -1,0 +1,132 @@
+[[ch01]]
+=== Why Micron?
+
+==== What Micron is
+
+Micron, an abbreviation of _MicroOberon_, is a statically typed, modular systems programming language.
+Its syntax is in the tradition of Pascal, Modula-2 and Oberon; its reach is that of C.
+A Micron program can be an ordinary application, a library with a C-compatible interface, a device driver,
+an operating system kernel, or the boot code that runs before a stack exists.
+All of this is written in the same language,
+without assembler and without a separate, unchecked "system" dialect.
+
+The language is value-oriented: variables contain values,
+records and arrays occupy memory whose layout the programmer can state and reason about,
+and nothing is allocated behind the programmer's back.
+There is no mandatory runtime system, no hidden type descriptors, no implicit heap.
+Where dynamic memory, dynamic dispatch or garbage collection are wanted, they are available, explicitly,
+and only in modules that declare they need them.
+This is Micron's central organizing idea, the _language levels_: a module states the level it lives on,
+from level 0 (no stack, no heap, boot code and interrupt handlers) up to level 5 (garbage-collected objects),
+and a module can only import modules of the same or a lower level.
+The dependency rule turns a diffuse property of C projects,
+namely which parts of the code secretly require malloc or a runtime, into a checked declaration.
+
+Micron is designed for a single-pass compiler, and it assumes ABI compatibility with C on the target platform.
+Both constraints are inherited convictions: a language that cannot be compiled simply will be compiled rarely,
+and a systems language that cannot call and be called by the platform's lingua franca will remain an island.
+
+==== Where it comes from
+
+Micron is a descendant of the Wirth line: Pascal (1970), Modula-2 (1979), Oberon (1987), Oberon-2 (1991) <<R7>>,
+and Oberon-07 (2007, 2013, 2016) <<R8>>, each a deliberate simplification and consolidation of its predecessor.
+Ideas of this school also reached a mass audience through Go (2009), whose module and import model, receiver syntax,
+fast compilation and general preference for smallness follow the same instincts.
+Go's success proved that the demand for simpler languages is real.
+
+I arrived at Micron through two of my own designs: Oberon+ and Luon.
+Micron is the systems programming conclusion of this exploration.
+It is not a first attempt, but a consequent evolution in the spirit of Wirth's philosophy,
+applied to a question Wirth himself left for others to finish:
+what should the lower half of the software world be written in?
+
+==== What the ancestors left to do
+
+Every language in this book's audience solves part of the problem Micron addresses, and each leaves another part
+for a successor to take up.
+What follows is an account of where each one's design
+choices leave opportunities that a systems language written today can close.
+
+
+===== Oberon: elegant, and deliberately narrow at both ends
+
+Oberon is the most direct role model for Micron.
+Its austerity was a design achievement, not an oversight: Wirth and Gutknecht set out to show how much
+could be left out of a language without losing expressive power, and Oberon proves the point compellingly.
+Its one honest tension is with its own stated ambition to be a systems language.
+The evidence is in its own source code: Project Oberon <<R2>>, the system Wirth and Gutknecht wrote in it,
+relies throughout on the pseudo-module SYSTEM: `SYSTEM.PUT` and `SYSTEM.GET` to touch memory,
+`SYSTEM.ADR` to take addresses as long integers used for arithmetic operation, and `SYSTEM.VAL` to reinterpret bits.
+These are not ordinary library procedures; they are an escape hatch through which the type system's guarantees are deliberately set aside,
+by design, for the code that needs to reach the machine directly.
+Every system related module imports them, which suggests that the boundary the language draws
+between what SYSTEM is for and what the rest of the language is for sits in a slightly inconvenient place
+for a language whose stated ambition includes systems work.
+
+The specific gaps that invite reliance on SYSTEM are worth naming:
+
+- No unsigned types: The Oberon of 1990 and Oberon-2 offer several signed
+integer types (SHORTINT, INTEGER, LONGINT) and SYSTEM.BYTE; Oberon-07 consolidated this to a single INTEGER and BYTE.
+Only the BYTE type lets a program state directly that a value is an unsigned quantity or a plain bit pattern.
+Systems code lives on bytes, flags, device registers of different byte widths and file formats,
+where the distinction between a signed number and a bit pattern matters a great deal,
+and Oberon programs express it indirectly, through round trips via `CHR` and `ORD`.
+- Floor division: Oberon's `DIV` and `MOD` floor toward negative infinity, a mathematically clean choice,
+while most processors and most other languages truncate toward zero.
+The mismatch is small in most programs, but in a systems language it is exactly the kind of quiet
+disagreement between language and machine that is worth rethinking.
+- No bitfields, no variant records: Hardware registers and wire formats
+are described in datasheets as bit layouts, and Oberon leaves their expression to shifting and masking through SYSTEM
+rather than to a declared language construct. The SET type solves the problem partially.
+- An implicit runtime: NEW relies on the kernel; type descriptors, the
+garbage collector and the trap handlers are assumptions the language makes on the programmer's behalf.
+Code that must run before or below these facilities, such as a boot loader, an interrupt handler,
+or the allocator itself, sits outside what the core language alone can express.
+
+At the other end of the spectrum, Oberon is also quite spartan for application-level work: no enumerations,
+no generics, no interfaces; pointers only to records and arrays (the latter only in Oberon-2); strings with limited built-in manipulation.
+This combination of minimalism at both ends is a large part of why Oberon, despite its influence and its devoted
+following, never became a mainstream choice for either systems programmers or application programmers.
+Oberon-2 recognized part of the gap and made object-oriented code expressible with type-bound procedures and dynamic arrays,
+while leaving the rest for a later design to address.
+
+Micron keeps what Oberon got right: the module system, the syntax discipline, the single-pass mentality, the smallness.
+It extends the language to close each gap directly: signed and unsigned integer types of explicit widths,
+with distinguished operations for converting a value and for reinterpreting a pattern; truncating division,
+with `obdiv` and `obmod` available where Oberon's original semantics are wanted;
+bitfields and variant records as record features; pointers to anything, an address operator, and pointer operations,
+typed and explicit rather than routed through VAL and LONGINT; and the language levels as an explicit, checked alternative
+to an implicit runtime.
+
+===== C: broad reach, with fewer guardrails than one might like
+
+C can do everything Micron can do, and its reach across every corner of computing, from the smallest
+microcontroller to the largest server, is not in question. The argument is about what C leaves to convention
+rather than to the compiler.
+
+C has no module system in the modern sense.
+Fifty years on, its unit of composition is still textual inclusion of headers, with the consequences that follow:
+programming interfaces are not enforced by the language, initialization order is a matter of care rather than guarantee,
+compile times grow with the size of the include graph,
+and the preprocessor operates as a second, untyped language interleaved with the first.
+Micron has modules with explicit imports and exports, compiled separately and checked across boundaries,
+initialized in dependency order.
+Much of what the C preprocessor is used for in practice, namely constants, inline functions, compile-time
+configuration, conditional compilation and generic containers, appears in Micron as typed language features:
+constants, INLINE and INVAR procedures, configuration variables, conditional compilation, and generic modules.
+
+C's type system permits more than many programmers expect it to:
+implicit conversions between integers of different widths and signedness, arrays that decay to pointers,
+enumerations that are, at the machine level, simply integers.
+These choices made sense for a language designed to be close to the hardware and easy to implement in 1972;
+six decades of experience with large C codebases have shown where they invite mistakes.
+Micron's conversions are explicit and named by intent (`val` converts a value, `cast` reinterprets a representation),
+arrays keep their type instead of decaying to a pointer, and enumerations are proper types.
+
+Much of what C cannot prevent is well documented in the CVE database.
+A quieter limitation is what C cannot express: there is no direct way to state that a translation unit does not
+allocate, does not use the FPU, or may run before the runtime is initialized.
+Such properties are typically enforced by convention, linker scripts and code review instead.
+In Micron they are the language levels, stated and checked rather than remembered.
+
+TBD

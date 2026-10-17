@@ -1,0 +1,32 @@
+// A service module: exponentially distributed random numbers.
+module RandomNumbers
+
+import MathL
+
+var seed: uint32
+
+// tag::init[]
+procedure Init*(s: uint32)
+begin
+    seed := s
+end Init
+// end::init[]
+
+// tag::uniform[]
+procedure Uniform*(): longreal      // uniform in (0, 1]
+begin
+    seed := seed * 1664525 + 1013904223
+    return flt(val(int32, shr(seed, 8)) + 1) / 16777216.0
+end Uniform
+// end::uniform[]
+
+// tag::exp[]
+procedure Exp*(mu: longreal): longreal  // exponential with rate mu
+begin
+    return -MathL.ln(Uniform()) / mu
+end Exp
+// end::exp[]
+
+begin
+    seed := 12345
+end RandomNumbers

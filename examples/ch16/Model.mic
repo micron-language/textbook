@@ -1,0 +1,64 @@
+// Simulation of a waiting line, after Reiser and Wirth, Programming in
+// Oberon, chapter 10.
+module Model [level = 3]
+
+import Calendar, Paths, RandomNumbers, Out
+
+// tag::decls[]
+const
+    arrival   = 0
+    departure = 1
+
+var
+    event: int32
+    time: longreal          // current simulation time
+    q: Paths.Path           // state of queue and statistics
+    lambda: longreal        // arrival rate
+    mu: longreal            // inverse of mean service time
+// end::decls[]
+
+// tag::arrival[]
+procedure ProcessArrival()
+begin
+    Calendar.Schedule(arrival, time + RandomNumbers.Exp(lambda))
+    if q.n = 0 then
+        Calendar.Schedule(departure, time + RandomNumbers.Exp(mu))
+    end
+    q.Up(time)
+end ProcessArrival
+// end::arrival[]
+
+// tag::departure[]
+procedure ProcessDeparture()
+begin
+    q.Down(time)
+    if q.n > 0 then
+        Calendar.Schedule(departure, time + RandomNumbers.Exp(mu))
+    end
+end ProcessDeparture
+// end::departure[]
+
+// tag::simulate[]
+procedure Simulate(dt: longreal)
+    var tEnd: longreal
+begin
+    tEnd := time + dt
+    repeat
+        Calendar.GetNextEvent(@event, @time)
+        if event = arrival then ProcessArrival
+        elsif event = departure then ProcessDeparture
+        end
+    until time > tEnd
+end Simulate
+// end::simulate[]
+
+// tag::body[]
+begin
+    lambda := 1.0 mu := 1.25    // utilization 0.8: expected mean 4.0
+    time := 0.0
+    Calendar.Reset q.Init
+    Calendar.Schedule(arrival, 0.0)
+    Simulate(100000.0)
+    Out.String("mean = ") Out.LongReal(q.Mean(time), 10) Out.Ln
+end Model
+// end::body[]

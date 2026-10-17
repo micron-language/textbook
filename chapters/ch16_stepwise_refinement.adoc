@@ -1,0 +1,367 @@
+[[ch16]]
+=== Stepwise Refinement and Data Abstraction
+
+The chapters so far have introduced the language one feature at a time,
+each with an example small enough to show the feature and nothing else.
+A real programming task is the opposite: it arrives whole,
+with the data structures, the algorithms and the module boundaries
+all undetermined and all seemingly needed at once.
+The technique for not getting swamped is old and has a name:
+_stepwise refinement_, described by Wirth and practiced
+in every well-structured program.
+One proceeds on deliberately chosen levels of abstraction,
+first sketching the task in terms of subtasks,
+then giving each subtask a name and a precise interface,
+and only then, one at a time, the program text behind the name.
+The procedure is the indispensable tool of this process;
+the module adds a second level of structure through
+deliberately chosen interfaces and import relations.
+
+This chapter practices the technique on one program developed slowly
+from the requirements to four modules.
+The example is a classic: the simulation of a waiting line,
+the worked centerpiece of Reiser and Wirth's _Programming in Oberon_ (chapter 10),
+transposed here from Oberon to Micron.
+Readers who know that book will recognize the route;
+the interest lies in what stays the same, which is nearly everything that matters,
+and in the places where Micron's pointers,
+visibility marks and unsigned types leave their trace.
+
+==== A waiting line
+
+Consider a queue in front of a ticket counter.
+Customers arrive, wait their turn, are served, and leave.
+The question a designer of such a system asks is quantitative:
+how long does the line get for a given arrival rate and service speed?
+No deterministic formulation captures the arrival of customers;
+the only usable model is a statistical one.
+Random numbers generate the events, customer arrivals and departures,
+and the state of the system changes only at those instants.
+Nothing happens between events, so simulated time need not advance
+in fixed steps; it jumps from event to event.
+Such a program is a _discrete event simulation_.
+
+Two kinds of event govern the waiting line:
+the _arrival_ and the _departure_ of a customer,
+each with an associated _due time_.
+To keep events until they fall due, the simulation needs a _calendar_
+supporting two actions: an event may be _scheduled_,
+and the most imminent event may be _retrieved_.
+The state of the queue itself is compactly described:
+customers have no identity, so an integer counting the customers
+waiting or in service says everything.
+
+With these notions the operation of the waiting line can be stated
+algorithmically before any Micron is written:
+
+[source,text]
+----
+repeat
+    "retrieve the most imminent event from the calendar"
+    if "the event is an arrival" then
+        "schedule the next arrival event"
+        "if the queue is empty, schedule a departure event"
+        "join the queue"
+    elsif "the event is a departure" then
+        "leave the queue; if it is not empty, schedule the next departure"
+    end
+until "the simulation time exceeds the given limit"
+----
+
+The times between arrivals, and the service times, come from
+two sequences of random numbers.
+For both we use the _exponential distribution_,
+the standard model for independent arrivals;
+its single parameter is the rate
+(arrivals per unit time, or the inverse of the mean service time).
+
+==== From the algorithm to Micron terms
+
+The description above is rigorous but far from an executable program.
+Turning it into one requires
+
+. a data representation of the system state;
+. a precise definition of the calendar, in particular of _schedule_ and _retrieve_;
+. the translation of the algorithm into a Micron procedure;
+. procedures that initialize the model and produce output;
+. the embedding of it all in one or several modules.
+
+The difficulty in any such task is deciding where to start,
+since the problems seem interrelated: the loop needs the calendar,
+the calendar needs a data structure, the data structure depends on
+what the loop needs.
+Abstraction breaks the circle.
+We can write a call to a procedure without having written the procedure;
+a name and a parameter list suffice.
+So we start with the state representation, _postulate_ the calendar
+as two procedure headers, write the loop against them,
+and only then return to implement what we postulated.
+That is stepwise refinement in one sentence.
+
+Events are conveniently represented as a pair:
+an integer identifying the kind of event, and its due time.
+For the calendar we postulate
+
+[source]
+----
+procedure GetNextEvent(id: ^int32; t: ^longreal)
+procedure Schedule(id: int32; t: longreal)
+----
+
+Where the Oberon original passes `VAR` parameters,
+Micron passes pointers, and the call sites will say `@event` and `@time` explicitly;
+the caller sees at a glance which arguments may change, a small but real gain in clarity.
+For the random numbers we postulate `RandomNumbers.Exp(mu)`,
+returning an exponentially distributed value with rate `mu`.
+The global state of the model is then:
+
+[source]
+----
+include::../examples/ch16/Model.mic[tag=decls]
+----
+
+The named constants `arrival` and `departure` render the program readable;
+their use should be considered essential and not a nicety.
+With the preliminaries settled, the loop of the previous section translates directly:
+
+[source]
+----
+include::../examples/ch16/Model.mic[tag=simulate]
+----
+
+The two subtasks are procedures whose text can now be written with equal directness.
+An arrival schedules the next arrival; if the queue was empty,
+the newcomer is served at once, so a departure is scheduled too;
+and the queue grows by one:
+
+[source]
+----
+include::../examples/ch16/Model.mic[tag=arrival]
+----
+
+A departure shrinks the queue, and if customers remain,
+the next departure is scheduled:
+
+[source]
+----
+include::../examples/ch16/Model.mic[tag=departure]
+----
+
+The calls `q.Up` and `q.Down` replace a bare `inc(q.n)` and `dec(q.n)`;
+the reason is the statistics gathering of a later section,
+and postulating the module `Paths` now spares us a second visit to these procedures later.
+The simulation is specified except for the postulated services,
+which we implement in a second and third round of refinement.
+
+==== Hiding details: the module Calendar
+
+The calendar is the central component of every discrete event
+simulation, useful beyond this program,
+so we encapsulate it in a module of its own: a _service module_,
+a building block in the computer's library rather than a part
+of one particular program.
+
+Events in a calendar have a natural order, defined by their due time.
+An obvious representation is therefore a list kept ranked,
+with the head of the list the most imminent event,
+built from the heap records of <<ch08>>:
+
+[source]
+----
+include::../examples/ch16/Calendar.mic[tag=iface]
+----
+
+Retrieving means unlinking and disposing the head;
+if the calendar is empty, the simulation has run dry,
+and a special identifier reports the _deadlock_:
+
+[source]
+----
+include::../examples/ch16/Calendar.mic[tag=getnext]
+----
+
+Scheduling allocates an event record and inserts it
+so that the list remains ranked with respect to time:
+
+[source]
+----
+include::../examples/ch16/Calendar.mic[tag=schedule]
+----
+
+A third procedure, `Reset`, empties the calendar so that
+a new simulation run may start:
+
+[source]
+----
+include::../examples/ch16/Calendar.mic[tag=reset]
+----
+
+There is little to explain about the procedures;
+the interesting decision is the _choice of exports_.
+Clearly `GetNextEvent`, `Schedule` and `Reset` carry the star.
+But the type `Event` and the anchor `clndr` do not.
+The importing module is perfectly served by the three procedures;
+exporting the list would invite clients to traverse and modify it,
+and a client inserting an event at the wrong place would
+annihilate the results of the simulation, silently.
+A data structure that is invisible outside its module and is created
+and changed exclusively through exported procedures is called an _abstract data structure_;
+the procedures, together with the constant `Deadlock`, form its _interface_.
+
+Data hiding pays three times.
+The structure is protected, so its integrity is guaranteed.
+The documentation shrinks to the interface, and with well-chosen names
+the interface almost documents itself.
+And the implementer remains free to _change the representation_
+without affecting any client:
+a ranked list costs linear time per insertion,
+and a big simulation whose calendar grows long would profit
+from a heap-ordered array with logarithmic insertion;
+module `Calendar` can make that change tomorrow,
+and no importing module needs to be touched or even recompiled
+into a different shape, as long as the three procedure headers stay.
+
+==== The module RandomNumbers
+
+Reiser and Wirth assume a module `RandomNumbers` in the workstation's library.
+Micron's oakwood set has none, so the refinement includes writing it,
+which takes a dozen lines on top of `MathL` from <<ch14>>.
+The core is the linear congruential generator already used for the fern of <<ch15>>:
+
+[source]
+----
+include::../examples/ch16/RandomNumbers.mic[tag=uniform]
+----
+
+Adding one to the 24-bit value moves the result into `(0, 1]`,
+which matters in the next procedure: the logarithm of zero must not occur.
+An exponential random number is obtained from a uniform one
+by a single formula, `-ln(u)/mu` for `u` uniform:
+
+[source]
+----
+include::../examples/ch16/RandomNumbers.mic[tag=exp]
+----
+
+The module keeps its seed hidden, the same abstraction decision, 
+and exports `Init` for reproducible runs:
+
+[source]
+----
+include::../examples/ch16/RandomNumbers.mic[tag=init]
+----
+
+==== Computing statistics: the module Paths
+
+Running the simulation as specified so far would merely keep the computer busy;
+the experiment must be instrumented.
+In practice a great deal of a simulation program's size
+is instrumentation and data analysis,
+which makes the facility another candidate for a service module.
+
+The measure we want is the mean length of the queue over a period `T`.
+Plot the number of customers against time:
+a step function that jumps up at each arrival and down at each departure.
+Such a graph is called the _path_ of the queueing process,
+and the mean queue length is the area `W` under the path divided by `T`.
+Each time the path jumps, the area accumulated so far is updated;
+for that the record needs the path value `n` before the jump
+and the epoch `t` of the previous jump:
+
+[source]
+----
+include::../examples/ch16/Paths.mic[tag=type]
+----
+
+A realistic simulation observes many queues, not one,
+so the mechanism must allow the client to declare an open-ended
+number of paths.
+In Micron, that mechanism is the exported _type_:
+clients declare instances of `Paths.Path` in the customary manner,
+and every procedure of the module is bound to the Path record:
+
+[source]
+----
+include::../examples/ch16/Paths.mic[tag=procs]
+----
+
+`Up` and `Down` record a jump at time `t`;
+`Mean` closes the running interval and returns the time average.
+Note the visibility marks on the type: `Path*` exports the record,
+but of the fields only `n*` carries a star.
+The client may read the instantaneous queue length,
+which `Model` genuinely needs (`q.n = 0` decides whether a departure must be scheduled),
+but the accumulator `w` and the time stamp `t` remain invisible and thus safe from tampering.
+A type whose instances are manipulated exclusively through
+the module's procedures is called an _abstract data type_;
+compared with the abstract data _structure_ of `Calendar` it moves one step further:
+not the single hidden instance is the abstraction, 
+but the type, of which the client may have many.
+Micron's per-field visibility, inherited from Oberon,
+makes the halfway house possible: one field public, the rest hidden,
+a finer grain than the all-or-nothing of C's opaque pointers.
+
+==== Completion
+
+All elements are in place; module `Model` draws on the services of `Calendar`,
+`Paths` and `RandomNumbers` and adds the initialization and the report:
+
+[source]
+----
+include::../examples/ch16/Model.mic[tag=body]
+----
+
+Note that an initial arrival event must enter the calendar before the loop starts,
+or the simulation would never begin.
+The module is mainly composed of declarations and calls to procedures
+exported by service modules, visible in the predominance of qualified identifiers;
+that is the texture of a properly modularized program.
+
+The run also validates the program, because this particular model has a known answer.
+A queue with exponential arrivals and services is the M/M/1 queue of queueing theory; 
+with arrival rate `lambda` and service rate `mu` its mean number 
+of customers in the system is `rho/(1-rho)`,
+where `rho = lambda/mu` is the utilization.
+For the rates in the listing, `rho` is 0.8 and the expected mean is `4.0`; the program prints
+
+[source,text]
+----
+mean = 3.973377e+00
+----
+
+after 100000 time units, as close to theory as one run of
+finite length can be expected to come.
+
+==== What the example teaches
+
+Looking back over the four modules,
+the method stands out more clearly than any single listing.
+
+The program was never attacked all at once.
+The first version was English inside `repeat ... until`;
+the second replaced English phrases by procedure names;
+each following round gave one name its program text.
+At every stage there existed a precise,
+checkable description of the whole, which is the point of the discipline:
+the structure was decided when the program was still small enough to think about.
+
+The module boundaries follow the abstractions, not the file sizes.
+`Calendar` hides a data structure, `Paths` hides a type,
+`RandomNumbers` hides a seed; each has an interface of a few lines,
+and each could be reimplemented tomorrow without a ripple.
+The import graph is a proper hierarchy:
+`Model` imports the three service modules and `Out`;
+`RandomNumbers` imports `MathL`; nothing imports `Model`.
+Properly structured abstractions avoid mutual dependency,
+and Micron enforces it: the module graph must be cycle-free,
+as stated in <<ch05>>.
+
+Finally, the transcription itself is evidence for a claim made in <<ch01>>:
+the Oberon original of 1992 moves to Micron with its architecture untouched,
+and the differences that do appear,
+`@` at the call sites instead of an invisible `VAR`,
+explicit `dispose` where Oberon's collector cleaned up,
+`flt` and `val` where Oberon converted silently,
+and the procedures bound to the Path record,
+are exactly the places where Micron improves and
+trades convenience for the explicitness a systems language wants.

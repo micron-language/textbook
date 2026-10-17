@@ -1,0 +1,36 @@
+// Statistics of a queueing process: an abstract data type.
+module Paths
+
+// tag::type[]
+type
+    Path* = record
+        n*: int32           // current path value
+        w, t: longreal      // accumulated waiting time; epoch of last change
+    end
+// end::type[]
+
+// tag::procs[]
+procedure Path.Init*()
+begin
+    self.w := 0.0 self.n := 0 self.t := 0.0
+end Init
+
+procedure Path.Up*(t: longreal)
+begin
+    self.w := self.w + flt(self.n) * (t - self.t)
+    inc(self.n); self.t := t
+end Up
+
+procedure Path.Down*(t: longreal)
+begin
+    self.w := self.w + flt(self.n) * (t - self.t)
+    dec(self.n); self.t := t
+end Down
+
+procedure Path.Mean*(tEnd: longreal): longreal
+begin
+    return (self.w + flt(self.n) * (tEnd - self.t)) / tEnd
+end Mean
+// end::procs[]
+
+end Paths

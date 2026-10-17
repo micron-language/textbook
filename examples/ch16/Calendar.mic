@@ -1,0 +1,57 @@
+// The calendar of a discrete event simulation: an abstract data structure.
+module Calendar [level = 3]
+
+// tag::iface[]
+const Deadlock* = -1
+
+type
+    Event     = ^EventDesc
+    EventDesc = record
+        id: int32
+        time: longreal
+        next: Event
+    end
+
+var clndr: Event
+// end::iface[]
+
+// tag::getnext[]
+procedure GetNextEvent*(id: ^int32; t: ^longreal)
+    var e: Event
+begin
+    if clndr # nil then
+        id^ := clndr.id t^ := clndr.time
+        e := clndr clndr := clndr.next
+        dispose(e)
+    else
+        id^ := Deadlock
+    end
+end GetNextEvent
+// end::getnext[]
+
+// tag::schedule[]
+procedure Schedule*(id: int32; t: longreal)
+    var x, y: Event
+begin
+    new(x) x.id := id x.time := t
+    if (clndr = nil) or (t < clndr.time) then
+        x.next := clndr clndr := x
+    else
+        y := clndr
+        while (y.next # nil) and (t >= y.next.time) do y := y.next end
+        x.next := y.next y.next := x
+    end
+end Schedule
+// end::schedule[]
+
+// tag::reset[]
+procedure Reset*()
+    var e: Event
+begin
+    while clndr # nil do e := clndr clndr := clndr.next dispose(e) end
+end Reset
+// end::reset[]
+
+begin
+    clndr := nil
+end Calendar
