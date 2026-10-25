@@ -152,8 +152,8 @@ Bit manipulation is provided by predeclared functions rather than operators: `ba
 `bnot` for the bitwise connectives, `shl` and `shr` for logical shifts, `asr` for the arithmetic shift right.
 Their names keep bit twiddling recognizable at a glance,
 which matters in systems code where logical `and` and bitwise `band` may appear in the same expression.
-
-TBD
+<<ch12>> adds the record BITS fields,
+by which device registers and wire formats are declared as named bit ranges instead of shift-and-mask code.
 
 ==== Sets
 

@@ -83,7 +83,7 @@ and within the generic module it determines the permitted operations,
 so a misuse of `T` is reported in the generic module, at the place that causes it,
 not as an avalanche in the client's build.
 
-A constraint can also be an interface type, a use of interfaces at compile time
+A constraint can also be an interface type (<<ch07>>), a use of interfaces at compile time
 that I have not seen in other languages.
 The actual type must satisfy the interface structurally; it need not be declared with any
 reference to it:
@@ -121,5 +121,5 @@ accurate: generic modules offer most of the capabilities of preprocessor macros,
 but parsed, scoped and type checked.
 The price of the module-level granularity is that a single generic procedure needs a module around it.
 In practice the module boundary was already there: a container, its operations and its
-invariants belong together, and the AWFY collection classes TBD, `Vector(T)` among them,
+invariants belong together, and the AWFY collection classes of <<ch24>>, `Vector(T)` among them,
 show the pattern in a real application.

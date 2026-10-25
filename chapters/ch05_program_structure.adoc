@@ -13,8 +13,10 @@ What Modula-2 added, and every Wirthian language since has kept,
 is one more level above the procedure: the module.
 Its purpose is different in kind from the procedure's.
 A procedure abstracts an _action_; a module draws a _boundary_,
-
-TBD
+deciding which names the rest of the program may see,
+and it is the only place in the language where such a boundary can be drawn.
+Everything the later chapters build, abstract data structures and types (<<ch16>>),
+interfaces (<<ch07>>), whole libraries (<<ch14>>), rests on this one mechanism.
 
 A module is a collection of declarations of constants, types, variables and procedures,
 together with an optional statement sequence that assigns initial values to the variables.
@@ -66,7 +68,7 @@ Pascal programmers will recognize the module as the unit that replaces both the 
 interface/implementation split and the header file discipline of C.
 There is no separate interface text to maintain:
 the compiler extracts the exported interface from the marked declarations,
-and separate compilation rests on that extracted interface TBD.
+and separate compilation rests on that extracted interface (<<ch13>> describes the mechanism).
 
 ===== Clients and providers
 
@@ -124,7 +126,8 @@ would present the identical interface.
 The provider may exchange the representation tomorrow,
 and no client needs to be edited, because no client can have
 depended on what it could never see.
-TBD
+<<ch16>> develops this idea into abstract data structures and types;
+the module boundary shown here is all the machinery it needs.
 
 ===== Separate compilation and initialization order
 
@@ -149,7 +152,7 @@ The restriction bites occasionally, when two modules seem to need each
 other, but the cure is always the same and always an improvement:
 the declarations both sides depend on move into a third module
 below both, or one direction of the dependency is inverted
-with procedure variables TBD.
+with procedure variables (<<ch07>>).
 A cycle-free import graph is also what makes the initialization rule
 of this chapter's first section well defined:
 module bodies run in import dependency order, providers first,
@@ -253,7 +256,7 @@ and together they replace a surprising amount of C preprocessor and linker lore:
 
 _inline_ requests that the body be expanded at the call site; no call happens, and no stack frame is needed.
 Inline procedures cannot be recursive.
-At language level 0, where no stack exists yet, all procedures are implicitly inline; TBD.
+At language level 0, where no stack exists yet, all procedures are implicitly inline; <<ch12>> builds on this.
 
 _invar_ (invariable) declares a procedure whose result depends only on its arguments:
 it may call only other invar procedures, and it cannot touch module variables.
@@ -265,16 +268,15 @@ so an invar procedure may be used in constant declarations:
 include::../examples/ch05/Structure.mic[tag=invar]
 ----
 
-----
-const c8 = cube(8)    // evaluated by the compiler
-----
-
+The same `cube` is still an ordinary procedure: `cube(n)` with a variable `n` is evaluated at run time.
+Unlike inline procedures, invar procedures may be recursive.
 Where C programs compute tables with external scripts or preprocessor contortions,
-a Micron program writes an ordinary procedure and marks it invar. TBD
+a Micron program writes an ordinary procedure and marks it invar.
+<<ch11>> gives the precise rules and makes systematic use of this.
 
 _extern_ declares a procedure implemented elsewhere: in another Micron object file, or, with the form `extern C`,
 in a C library reached through the foreign function interface, optionally with the external name given as a string.
-This is the door to the outside world TBD.
+This is the door to the outside world, and <<ch13>> walks through it.
 
 A _forward declaration_, marked with `^`, announces a procedure before its implementation,
 for the case of mutual recursion in a single-pass compilation:
@@ -308,7 +310,7 @@ include::../examples/ch05/Structure.mic[tag=caseloop]
 The `case` statement selects on an integer, enumeration or character value; labels are constants or ranges,
 may not overlap, and if no label matches and there is no `else`, the program aborts,
 which is the correct default for state machines that are supposed to be exhaustive.
-A second form of `case` selects on the dynamic type of an object pointer TBD.
+A second form of `case` selects on the dynamic type of an object pointer; it belongs to <<ch09>>.
 
 Finally, Micron has `goto`,
 with labels declared in the statement sequence and jumps forbidden into structured statements.

@@ -3,7 +3,7 @@
 
 The basic types of <<ch03>> are combined into structured types in four ways: as arrays, records, 
 pointers and procedure types. 
-TBD
+Object and interface types build on them and are treated in <<ch07>> and <<ch09>>. 
 This chapter also introduces constructors, the literal notation for writing structured values.
 
 ==== Arrays
@@ -23,7 +23,8 @@ Whole arrays of the same type may be assigned with one assignment.
 An _open_ array, written `array of T` or `[]T`, leaves the length out of the type.
 Open arrays occur in two places: as the base type of a pointer,
 and as the type of dynamically allocated storage (<<ch08>>).
-TBD.
+This is the point made in <<ch01>> and worth repeating: a value of open array type is a typed memory area,
+nothing more.
 No length is stored, no descriptor exists, and the program passes the length separately, as it would in C.
 What Micron adds over C is that fixed arrays do know their length at compile time, that `len` yields it,
 and that index checks can be generated where lengths are known.
@@ -140,7 +141,9 @@ using the rule stated in the array section;
 the assignment checks at compile time that the literal fits.
 Running the module prints the four peaks in descending order.
 Tables of records, searched, sorted or indexed,
-are the workhorse data structure of systems programs TBD.
+are the workhorse data structure of systems programs,
+from the file directory of <<ch20>> to the viewer lists of <<ch21>>,
+and they need nothing beyond the two constructors of this chapter.
 
 ===== Variant records
 
@@ -157,7 +160,7 @@ This is the classical variant record of Pascal,
 or the tagged union that C programmers assemble by hand from a `union` inside a `struct`;
 Micron gives the pattern a syntax but, at this language level, no enforcement, exactly like C.
 Systems code needs the overlay; file formats, protocol frames and instruction encodings are variant records by nature.
-Where checked alternatives are wanted, object types with type tests provide them. TBD
+Where checked alternatives are wanted, object types with type tests (<<ch09>>) provide them.
 
 ===== Bit fields
 
@@ -178,7 +181,7 @@ and `..` inserts explicit padding.
 In contrast to C,
 where the layout of bit-fields is implementation-defined and their use in drivers a portability hazard,
 the packing rules are part of the language.
-TBD
+<<ch12>> uses bit fields to declare device registers as named bit ranges instead of shift-and-mask expressions.
 
 ==== Pointers
 
@@ -206,7 +209,8 @@ include::../examples/ch06/Shapes.mic[tag=proctype]
 
 A procedure variable is assigned any procedure whose signature matches, and called like a procedure.
 The example module stores `rectArea` and `circleArea` in the same variable and computes areas through it;
-TBD.
+<<ch07>> builds the Wirth style of object orientation from exactly this mechanism,
+and the Micron System dispatches its commands through a table of procedure values.
 C has the same feature with a less readable notation; Pascal and Oberon programmers will feel at home.
 
 [[constructors]]

@@ -218,7 +218,7 @@ The pattern is the obvious one:
 include::../examples/ch14/Timing.mic[tag=timing]
 ----
 
-This is the same pattern the Are-we-fast-yet harness uses around
+This is the same pattern the Are-we-fast-yet harness of <<ch24>> uses around
 every benchmark: two `Ticks()` calls, a subtraction in the unsigned domain,
 and the difference converted once for printing.
 

@@ -8,7 +8,7 @@ mouse polling, a cursor and a millisecond timer; on the host it is implemented
 against SDL, XCB or Qt, behind the same Micron interface.
 That short list is enough for an interactive application,
 and this chapter builds two: a sketch pad and Barnsley's fractal fern,
-the closing example of Wirth's _Programming in Oberon_, here in Micron.
+the closing example of Wirth's _Programming in Oberon_ <<R16>>, here in Micron.
 
 The design is worth a moment before the procedures.
 `Screen` does not offer drawing operations, no lines, no fills, no text.
@@ -18,8 +18,8 @@ Everything a reader learned about bit manipulation in <<ch12>> becomes directly 
 and everything a graphics library would hide, pixel format, row layout,
 dirty regions, is in plain sight.
 This is the same discipline as the memory-mapped display of the Micron System
-and of historical machines from the Alto onward,
-which is precisely why the module exists: the Smalltalk-80 VM of <<TBD>>
+(<<ch21>>) and of historical machines from the Alto onward,
+which is precisely why the module exists: the Smalltalk-80 VM of <<ch24>>
 renders through `Screen`, and so does the Oberon System example when it runs directly on the host.
 
 ==== The framebuffer

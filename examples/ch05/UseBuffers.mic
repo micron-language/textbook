@@ -9,7 +9,7 @@ var
     ok: boolean
 
 begin
-    ok := Buffers.Put('h') ok := Buffers.Put('i')
+    ok := Buffers.Put('h'); ok := Buffers.Put('i')
     println(Buffers.count)          // 2: reading is allowed
     // Buffers.count := 0           // error: read-only export
     // Buffers.buf[0] := 'x'        // error: buf is not exported

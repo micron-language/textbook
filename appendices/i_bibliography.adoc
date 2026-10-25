@@ -28,7 +28,53 @@
   Oberon-07 revision, 2013/2016. projectoberon.net.
 - [[[R9]]] R. Keller:
   *The Micron Programming Language Specification.*
-  Distributed with the Micron source repository.
+  Distributed with the Micron source repository <<R21>>.
 - [[[R10]]] *The Oakwood Guidelines for Oberon-2 Compiler Developers.*
   1995.
-
+- [[[R11]]] A. Rimsa Álvares, J. N. Amaral, F. M. Quintão Pereira:
+  *Instruction Visibility in SPEC CPU2017.*
+  Journal of Computer Languages 66, 2021.
+- [[[R12]]] C. Lattner, V. Adve:
+  *LLVM: A Compilation Framework for Lifelong Program Analysis & Transformation.*
+  Proceedings of CGO, 2004. llvm.org.
+- [[[R13]]] F. Schmager, N. Cameron, J. Noble:
+  *GoHotDraw: Evaluating the Go Programming Language with Design Patterns.*
+  Proceedings of PLATEAU (Workshop on Evaluation and Usability of Programming Languages and Tools), 2010.
+- [[[R14]]] R. Jabangwe, J. Börstler, D. Šmite, C. Wohlin:
+  *Empirical Evidence on the Link Between Object-Oriented Measures and External Quality Attributes: A Systematic Literature Review.*
+  Empirical Software Engineering 20, 2015.
+- [[[R15]]] S. Marr, B. Daloze, H. Mössenböck:
+  *Cross-Language Compiler Benchmarking: Are We Fast Yet?*
+  Proceedings of the Dynamic Languages Symposium, 2016.
+- [[[R16]]] N. Wirth:
+  *Programming in Oberon. A Tutorial.*
+  projectoberon.net.
+- [[[R17]]] M. Reiser, N. Wirth:
+  *Programming in Oberon. Steps beyond Pascal and Modula.*
+  Addison-Wesley, 1992. people.inf.ethz.ch/wirth.
+- [[[R18]]] R. Ierusalimschy:
+  *Programming in Lua.*
+  Fourth edition. Lua.org, 2016.
+- [[[R19]]] R. Keller:
+  *The Micron Project Oberon System, Design Description.*
+  Design.md, kept with the system sources.
+- [[[R20]]] J. Hennessy et al.:
+  *The Stanford Integer Benchmarks* ("Hennessy suite"),
+  as circulated with Oberon systems.
+- [[[R21]]] R. Keller:
+  *Micron. A Systems Programming Language and Compiler.*
+  github.com/rochus-keller/micron.
+- [[[R22]]] N. Wirth:
+  *Project Oberon: The Computer.*
+  projectoberon.net.
+- [[[R23]]] *ECMA-335: Common Language Infrastructure (CLI).*
+  ECMA International, sixth edition, 2012.
+- [[[R24]]] N. Wirth:
+  *How to Use the Oberon System.*
+  projectoberon.net.
+- [[[R25]]] N. Wirth:
+  *Compiler Construction.*
+  projectoberon.net.
+- [[[R26]]] R. Griesemer, R. Pike, K. Thompson, et al.:
+  *The Go Programming Language Specification.*
+  go.dev/ref/spec.

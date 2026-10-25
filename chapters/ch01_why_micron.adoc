@@ -30,7 +30,7 @@ and a systems language that cannot call and be called by the platform's lingua f
 
 Micron is a descendant of the Wirth line: Pascal (1970), Modula-2 (1979), Oberon (1987), Oberon-2 (1991) <<R7>>,
 and Oberon-07 (2007, 2013, 2016) <<R8>>, each a deliberate simplification and consolidation of its predecessor.
-Ideas of this school also reached a mass audience through Go (2009), whose module and import model, receiver syntax,
+Ideas of this school also reached a mass audience through Go (2009) <<R26>>, whose module and import model, receiver syntax,
 fast compilation and general preference for smallness follow the same instincts.
 Go's success proved that the demand for simpler languages is real.
 
@@ -129,4 +129,75 @@ allocate, does not use the FPU, or may run before the runtime is initialized.
 Such properties are typically enforced by convention, linker scripts and code review instead.
 In Micron they are the language levels, stated and checked rather than remembered.
 
-TBD
+===== Pascal: a rich family, grown in several directions at once
+
+Wirth's original Pascal was aimed mainly at teaching and general programming rather than systems work;
+the Pascal that survives in active use today is the Turbo and Object Pascal lineage, continued in FreePascal and Delphi.
+FreePascal is an impressive piece of engineering with a long history of responding to real user demand,
+and that same history illustrates what happens when a language grows for decades primarily by addition:
+several dialect modes that are not always mutually consistent; multiple string types with different semantics
+and different costs (reference counting, copy-on-write, code page awareness) that a programmer inherits by default;
+classes with constructors, destructors, properties, two generations of interfaces, generics, anonymous functions
+and operator overloading, added alongside an older object model that remains present; and no single, complete
+specification that ties everything together.
+A FreePascal programmer who wants to know precisely what a line of code costs, or exactly what it means,
+often has to rely on accumulated community knowledge rather than one authoritative reference.
+
+Micron is addressed to programmers who valued Pascal's original virtues, namely readable syntax, real modules,
+fast compilation and a compiler that catches mistakes early, and who would like a modern language built on
+those virtues without four decades of accumulated dialects to navigate.
+It is considerably smaller than FreePascal, it has a single specification, and its costs are visible:
+nothing in Micron reference-counts, copies, boxes or dispatches unless the code says so.
+
+===== Go: the right instincts, carrying more than a systems language can afford
+
+Go deserves real credit in this company: it showed a mass audience that a small language with modules,
+fast compilation and structural interfaces is practical engineering, not an academic exercise,
+and its receiver syntax and overall taste sit close to the Wirth school's instincts.
+Go earned its popularity honestly, by making common tasks easy and by compiling fast.
+
+Where Go is not a systems language in this book's sense is in what every Go program carries with it:
+a substantial runtime, including a garbage collector, a goroutine scheduler and its own stack model.
+This is a reasonable trade for the application and server domain Go targets, but it is exactly the weight
+a kernel, a driver or a firmware image cannot carry, and it adds friction when calling into or out of C.
+The two extensions to the original design, namely the method-set rules (value receivers versus pointer
+receivers, addressability, automatic dereferencing) and the generics added in Go 1.18, both grew the
+specification considerably in order to serve their purpose; Go 1.18's generics in particular required a type
+inference mechanism whose specification is longer than Micron's language specification <<R9>> as a whole.
+
+Micron adopts the structural interface, which it considers one of Go's best ideas, with simplified rules:
+the receiver is always a pointer, so method-set questions do not arise;
+interfaces work below the object-oriented level and without dynamic types;
+and genericity is achieved by parameterizing modules, rather than by inferring types at each call site.
+It does this while keeping every level below where Go operates (no GC, no heap, no stack) programmable directly.
+
+==== What Micron is not
+
+Honesty about the boundaries, before the tour begins.
+Micron has no closures and no access to the local variables of enclosing procedures.
+There are no VAR parameters; where Pascal or Oberon would pass by reference, Micron passes an explicit pointer,
+so the call site shows the mutation.
+Arrays are one-dimensional (arrays of arrays exist),
+and a dynamically allocated array is a typed memory area without intrinsic length information.
+There is no operator overloading,
+no exceptions in the default language (a structured error mechanism is specified and discussed in <<ch17>>),
+no threads in the language, no WCHAR.
+These are not omissions, but considered decisions.
+The design consistently prefers the explicit to the convenient: a Micron program contains, on its face, everything that happens.
+
+==== The plan of the book
+
+<<ch02>> walks through a complete program and the toolchain.
+<<ch03>> introduces the notation and the type system,
+including the signedness discipline that distinguishes Micron most visibly from its ancestors.
+<<ch04>> addresses readers arriving from C, Pascal or Go directly, with the reasoning behind the differences.
+The remaining chapters of <<part2>> cover the language in depth, ascending the levels: program structure, structured types,
+abstraction without object-orientation (bound procedures, delegates, interfaces), dynamic memory,
+object-oriented programming, generic modules, compile-time programming, low-level programming, interfacing with C,
+the library modules and graphics, a worked exercise in stepwise refinement, and error handling.
+<<part3>> applies the language to a real system: the Micron System,
+a faithful port of Project Oberon to Micron on an emulated RISC-V machine, covering the kernel,
+memory management and garbage collector, file system, display, viewers, text system and applications,
+rounded up with further case studies.
+The appendices contain the tool documentation, the machine description, reference tables,
+and translation guides from C and Pascal.

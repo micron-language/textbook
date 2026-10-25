@@ -115,13 +115,13 @@ ReturnType       = [ POINTER TO | '^' ] NamedType
 FPSection        = [CONST] ident { [','] ident } ':' FormalType
 FormalType       = type
 ProcedureHeading = ( PROCEDURE | PROC ) [Receiver] identdef [ FormalParameters ]
-ForwardDeclaration = ( PROCEDURE | PROC ) '^' [Receiver] identdef [ FormalParameters ]
+ForwardDeclaration = ( PROCEDURE | PROC ) '^' [Receiver] identdef [ FormalParameters ] [ INVAR ]
 Receiver = '(' ReceiverParam ':' ReceiverType ')' | ReceiverType '.'
 ReceiverParam = ident
 ReceiverType = ident
 module     = MODULE ident [ MetaParams ] [ ModuleAttributes ] [';']
              { ImportList | WhereDecls | DeclarationSequence }
-		    [ BEGIN StatementSequence [FINALLY StatementSequence] ] 
+		    [ BEGIN StatementSequence ] 
              END ident ['.']
 ModuleAttributes ::= '[' Attribute { [','] Attribute } ']' 
 Attribute ::= ident [ '=' ConstExpression ]
@@ -133,7 +133,6 @@ MetaSection      = ['CONST' | 'TYPE'] ident { [','] ident } [ ':' NamedType ]
 WhereDecls       = WHERE { WhereDeclaration [';'] }
 WhereDeclaration = ident ':' type
 MetaActuals      = '(' ConstExpression { [','] ConstExpression } ')'
-directive = '<*' ident ( '+' | '-' ) '*>'
 directive  = '<*' [ scIf | scElsif | scElse | scEnd ] '*>'
 scIf       = IF scExpr THEN
 scElsif    = ELSIF condition THEN

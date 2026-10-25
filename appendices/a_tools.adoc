@@ -31,12 +31,12 @@ The options used throughout this book:
 | `-o <file>` | name of the executable (link mode)
 | `--target <t>` | code generator: `rv32`, `rv32-esp32`, `armv7` or `x86`
 | `--base <addr>` | load address of the executable, hexadecimal
-| `--runtime <file>` | a MIL file implementing the `MIC$` runtime, for freestanding targets
-| `--abi <default\|c>` | calling convention; `c` for interoperation with C
-| `--dump <mil\|mll\|mrl>` | write the intermediate representation next to the output
+| `--runtime <file>` | a MIL file implementing the `MIC$` runtime, for freestanding targets (<<ch19>>)
+| `--abi <default\|c>` | calling convention; `c` for interoperation with C (<<ch13>>)
+| `--dump <mil\|mll\|mrl>` | write the intermediate representation next to the output (<<app-d>>)
 | `-g` | generate debug information
 | `-q` | report only warnings and errors
-| `-l`, `-L` | link C archives, as usual
+| `-l`, `-L` | link C archives, as usual (<<ch13>>)
 |===
 
 The main argument is a module file or a project file (`.micpro`),
@@ -49,8 +49,13 @@ Most examples of this book are hosted programs and run with the interpreter:
 micc --run Example.mic -I <oakwood>
 ----
 
+Configuration variables (<<ch11>>) are given with `-D`, for example
+`micc --run -D DEBUG -D BUFSIZE=8192 Comptime.mic`.
+
 where `<oakwood>` is the directory of the oakwood library
-(`Out`, `In`, `Files`, `Args`, `Math`...) that ships with the Micron repository TBD
+(`Out`, `In`, `Files`, `Args`, `Math`...) that ships with the Micron repository <<R21>>;
+its modules are Micron with `extern` bodies backed by small C files,
+the worked example of <<ch13>>.
 
 ==== The RV32 emulator
 
@@ -70,7 +75,7 @@ cd vm && ./build.sh        # requires a C compiler and SDL2 (sdl2-config)
 The result is `vm/build/rv32vm`.
 Its two relevant options are `--elf`, to load a statically linked ELF file
 such as the one `micc` produces, and `--ram <MB>`, the RAM size that ends up
-in the boot header.
+in the boot header (<<ch18>>).
 
 ==== Building and running the Micron System
 
@@ -85,5 +90,4 @@ rv32vm --elf --ram 4 --disk disk.img Main
 
 `disk.img` is a plain file serving as the SPI disk;
 it contains the Oberon file system with the fonts and sample texts.
-
-TBD
+<<app-b>> describes what happens from there on.

@@ -183,7 +183,7 @@ which is part of the stack the collector scans anyway.
 
 ==== When collection runs
 
-As in the original, the collector runs as a task of the central loop (<<TBD>>),
+As in the original, the collector runs as a task of the central loop (<<ch21>>),
 between commands, when the heap is nearly full or after a number of input actions;
 `Oberon.GC` calls `Kernel.Collect()`, and there is no root set to pass.
 An object reachable only from a local variable of a running command can therefore

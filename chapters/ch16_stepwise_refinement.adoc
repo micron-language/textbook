@@ -20,7 +20,7 @@ deliberately chosen interfaces and import relations.
 This chapter practices the technique on one program developed slowly
 from the requirements to four modules.
 The example is a classic: the simulation of a waiting line,
-the worked centerpiece of Reiser and Wirth's _Programming in Oberon_ (chapter 10),
+the worked centerpiece of Reiser and Wirth's _Programming in Oberon_ <<R17>> (chapter 10),
 transposed here from Oberon to Micron.
 Readers who know that book will recognize the route;
 the interest lies in what stays the same, which is nearly everything that matters,

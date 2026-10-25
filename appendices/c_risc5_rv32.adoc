@@ -6,7 +6,7 @@ Two processor names appear in this book that are easily confused and must not be
 RISC-5 and RISC-V.
 
 RISC-5 is Wirth's own processor, designed for Project Oberon and described
-in his book about the computer <<TBD>>.
+in his book about the computer <<R22>>.
 It is a 32-bit machine of deliberate minimality: 16 registers,
 a small single-cycle instruction set, and a few special registers,
 among them `H` for the high word of a multiplication and the remainder of a division.
@@ -39,7 +39,7 @@ On RISC-5 a division leaves the remainder in the `H` register and
 `SYSTEM.H(0)` reads it. RISC-V has no such register;
 Micron expresses the remainder as `mod` (or `obmod` where Oberon's truncating
 semantics are required, <<ch03>>), and Wirth's
-`ASSERT(SYSTEM.H(0) = 0)` checks became real assertions on `mod` TBD.
+`ASSERT(SYSTEM.H(0) = 0)` checks became real assertions on `mod` (<<ch20>>).
 
 Rotation::
 RISC-5 has a rotate instruction, reached as `SYSTEM.ROT`.

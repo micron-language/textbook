@@ -4,7 +4,7 @@
 
 `micc` compiles Micron to MIL, the Micron Intermediate Language,
 before generating native code or interpreting.
-MIL is inspired by the ECMA-335 <<TBD>> (.NET) common intermediate language with the
+MIL is inspired by the ECMA-335 <<R23>> (.NET) common intermediate language with the
 baggage removed: a typed stack machine with modules, procedures and the
 Micron type system, no classes, no metadata streams, no exceptions machinery
 beyond what the language needs.
@@ -12,7 +12,7 @@ MIL has a textual form, and being able to read it pays off in three places
 of this book: checking what `inline` expanded to (<<ch05>>),
 verifying a calling convention at the C boundary (<<ch13>>),
 and understanding what the runtime interface `MIC$` receives from generated
-code (<<TBD>>, the system's `MIC+.mil` is a handwritten MIL module).
+code (<<ch19>>, the system's `MIC+.mil` is a handwritten MIL module).
 
 ==== A module and its MIL
 
@@ -106,7 +106,7 @@ rather than semantics.
 
 MIL files are also compiler input: an import is satisfied by a `.mic`,
 `.mil` or `.mob` file alike.
-The system uses this once, for `MIC+.mil` (<<TBD>>):
+The system uses this once, for `MIC+.mil` (<<ch19>>):
 the runtime interface `MIC$` is not expressible as a Micron module name,
 so a small handwritten MIL module forwards each `MIC$` procedure to its
 implementation in the ordinary Micron module `MIC`.

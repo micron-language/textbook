@@ -110,7 +110,8 @@ begin
 end spillRegs
 ----
 
-Level 0 is the floor of the language: no stack, no heap, no recursion, every procedure implicitly `inline`.
+Level 0 is the floor of the language: no stack, no heap, no recursion,
+every procedure implicitly `inline` (a procedure declared `invar` there is both).
 It exists for the moments before a machine is a machine, when the stack pointer is not yet set
 and calling a regular procedure is impossible.
 A boot sequence written at level 0 is a sequence of expanded procedure bodies that initialize

@@ -112,6 +112,7 @@ and commands live in the table `cmdTab` that `Main` filled at startup,
 each a procedure value rather than an entry-table address.
 The descriptor record `ModuleDesc` keeps all of Wirth's fields, including those
 only a loader would use, so the correspondence to his book remains visible.
+The failure convention is the one from <<ch17>>: 
 `Modules.res` is 0 on success and a small documented number otherwise, 
 with `importing` naming the culprit.
 

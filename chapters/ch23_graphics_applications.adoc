@@ -158,7 +158,7 @@ mutual recursion as data.
 Stars animates through an `Oberon` background task, 
 `Stars.Run` installs it and `Stars.Stop` removes it, 
 the task mechanism of <<ch21>> used from application code.
-Hennessy <<TBD>>, the classic benchmark collection, 
+Hennessy <<R20>>, the classic benchmark collection, 
 times its computations with `Oberon.Time` and prints through `Texts`;
 it is also the module to copy from when measuring anything in the system.
 

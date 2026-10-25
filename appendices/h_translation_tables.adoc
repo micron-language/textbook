@@ -32,7 +32,8 @@ The prose companion to these tables is <<ch04>>.
 |`extern` |`extern` procedures/modules |<<ch13>>
 |`#include` |`import` (semantic, no text inclusion) |<<ch05>>
 |`#define` constant |`const` declaration |<<ch05>>
-|`#if`/`#ifdef` |source code directives `<* if *>` |<<ch11>>
+|`#if`/`#ifdef` |source code directives `<* if *>` over configuration variables |<<ch11>>
+|`-DNAME=value` |`micc -D NAME=value`, read with `getenv` as a typed constant |<<ch11>>
 |`inline` |`inline` procedures |<<ch05>>
 |`constexpr` (C++) |`invar` procedures |<<ch11>>
 |`volatile` device access |pointer constructor to a device address |<<ch12>>
@@ -62,7 +63,7 @@ The prose companion to these tables is <<ch04>>.
 |interfaces (FPC, COM-style) |- |`interface` types, no reference counting |<<ch07>>
 |generics (FPC) |- |generic modules with meta parameters |<<ch10>>
 |`try`/`finally` (FPC) |- |`finally` section per procedure |<<ch17>>
-|exceptions (FPC) |- |`pcall`/`raise`, optional |<<ch17>>
+|exceptions (FPC) |- |`pcall`/`raise`, enabled per module |<<ch17>>
 |`div`/`mod` (truncating) |`DIV`/`MOD` (floor-style) |`div`/`mod` truncating as in Pascal; `obdiv`/`obmod` for the Oberon semantics |<<ch03>>
 |`absolute` (FPC) |SYSTEM.PUT/GET |pointer constructor `T{addr}` |<<ch12>>
 |`asm` blocks (FPC) |SYSTEM, code procedures |level 0: `inline`, `getreg`/`putreg` |<<ch12>>

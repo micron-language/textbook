@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.8, 2026-10-17
+v0.9, 2026-10-25
 :toc:
 :toclevels: 2
 :numbered:

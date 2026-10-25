@@ -1,8 +1,8 @@
 [[ch07]]
 === Abstraction without Object-Orientation
 
-Object-oriented programming acquired, over three decades, a reputation it did not earn on its merits alone,
-and lately a rejection it does not entirely deserve either.
+Object-oriented programming acquired, over three decades, a reputation it did not earn on its merits alone
+(see e.g. <<R14>>), and lately a rejection it does not entirely deserve either.
 The interesting observation behind both is that most of what programs need from "objects" is not inheritance
 and not virtual dispatch.
 It is three humbler things: bundling operations with the data they operate on; passing behavior around as a value;
@@ -17,7 +17,7 @@ all of it is available from language level 1 or 2 and resolved, wherever possibl
 Object types and dynamic dispatch, and the cases where they are genuinely the right tool, are the subject of <<ch09>>.
 
 This chapter develops the three means in order, then compares them on a real program:
-the "Are We Fast Yet?" benchmark suite (see <<R5>>),
+the "Are We Fast Yet?" benchmark suite (see <<R15>> and <<R5>>),
 which exist in several complete Micron implementations differing exactly in the means of abstraction they use.
 
 ==== Procedures bound to record types

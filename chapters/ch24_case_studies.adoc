@@ -144,5 +144,3 @@ None of them needed a language extension, a compiler switch beyond the target, o
 That is the claim of <<ch01>>, tested:
 the language levels span the space from boot code to garbage-collected applications,
 and the programs that prove it can be read next to the books that explain them.
-
-

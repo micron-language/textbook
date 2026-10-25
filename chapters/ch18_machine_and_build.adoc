@@ -7,7 +7,7 @@ The chapters follow the system bottom-up, from the machine to the applications,
 and each stays close to the corresponding chapters of Wirth's book,
 which remains the reference for the design; here the subject is what Micron
 makes different.
-The port's own Design.md, kept with the sources, records every deviation;
+The port's own Design.md <<R19>>, kept with the sources, records every deviation;
 this part of the book draws on it and credits it once for all.
 
 ==== The machine
@@ -143,6 +143,8 @@ in ordinary Micron, instead of at run time as in the Oberon System.
 so that the correspondence to Wirth's book stays visible;
 `Load` merely finds the descriptor of an already linked module,
 and `Free` removes descriptors without unloading anything.
+What real dynamic loading would take, an object format and relocation,
+is discussed in <<ch20>>.
 
 ==== Levels in the system
 

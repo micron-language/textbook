@@ -4,7 +4,8 @@
 Everything up to this point ran without a heap.
 Level 3 introduces it, and with it the pointers whose targets outlive the procedure that created them.
 This chapter covers explicit allocation and deallocation;
-garbage collection is a separate decision and a separate chapter TBD.
+garbage collection is a separate decision and a separate chapter (<<ch19>> shows the collector of the Micron System,
+and level 5 is discussed there in context).
 
 ==== Three kinds of storage
 
@@ -136,10 +137,11 @@ The `finally` section of a procedure supports the discipline further:
 its statements run whenever the procedure body terminates, on the normal path and on early returns alike,
 so a procedure that allocates temporary storage can place the `dispose` once, next to the exit, instead of before
 every `return`.
-TBD
+<<ch17>> treats `finally` together with error handling.
 
 Fragmentation and allocation strategy belong to the runtime rather than the language.
-The interpreter uses the host allocator; TBD.
+The interpreter uses the host allocator; the Micron System implements its own heap in the Kernel module,
+and <<ch19>> walks through it.
 The language only defines the contract: `new`, `newinit` and `dispose` can be routed to a custom
 implementation, so a freestanding program can choose its own allocator by implementing three procedures.
 
@@ -149,4 +151,4 @@ Level 5 adds `newgc`, which allocates under a garbage collector; such storage is
 The two allocation worlds do not mix on a single pointer:
 what was allocated with `new` is freed with `dispose`, what was allocated with `newgc` is reclaimed by the collector.
 The Micron System runs its user-facing data structures, texts and viewers under the collector
-while its kernel stays at the explicit levels; TBD.
+while its kernel stays at the explicit levels; <<ch19>> shows how both coexist in one program.

@@ -49,8 +49,11 @@ or in a comparable language.
 It teaches Micron, not programming.
 
 <<part1>> explains what Micron is and why it exists, and introduces the notation and the type system.
-<<part2>> covers the language feature by feature, TBD.
-<<part3>> walks through the Micron System, TBD.
+<<part2>> covers the language feature by feature,
+ascending Micron's _language levels_ from bare-metal code that needs neither stack nor heap up to garbage-collected objects.
+<<part3>> applies the language to its natural habitat: it walks through the Micron System,
+a port of Wirth and Gutknecht's Project Oberon operating system, which is compiled,
+linked and booted on an emulated RISC-V machine with a single command.
 The appendices contain everything needed to reproduce the examples, and reference material.
 
 === Examples
@@ -58,7 +61,14 @@ The appendices contain everything needed to reproduce the examples, and referenc
 As I write this, I have already migrated a lot of decently large and complex applications and systems to Micron,
 including the obligatory Project Oberon System (both hosted and native on Risc-V), the Smalltalk-80 VM, 
 the original P4 Pascal compiler <<R4>>, different versions of the Are-we-fast-yet benchmark suite <<R5>>, 
-the Scheme 9 virtual machine <<R6>>. 
+the Scheme 9 virtual machine <<R6>>, and an Oberon System 3 version which runs on the Raspberry Pi 3b is work in progress.
+Their source code is available on Github; more information can be found in <<ch24>>.
 
-TBD
+All examples in this book are real programs.
+They compile with the Micron compiler `micc`, and most of them run directly with `micc --run`;
+the book's sources include every example as a file.
+Where the Micron System follows Wirth's original design,
+the book does not repeat what Wirth and Gutknecht explain better;
+their books are freely available at https://projectoberon.net/ and are referenced throughout.
+
 

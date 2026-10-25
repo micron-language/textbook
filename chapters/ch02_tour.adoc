@@ -118,7 +118,7 @@ micc --target rv32 -o Main ... # cross-compile and link an executable
 
 `--run` uses no external tools and is how all examples of Parts I and II are executed.
 A `.micpro` project file lists source files and options for larger programs;
-the "Are We Fast Yet?" suite is run this way.
+the "Are We Fast Yet?" suite of <<ch07>> is run this way.
 Cross-compilation produces a statically linked ELF executable for a real instruction set (RISC-V 32-bit, ARMv7,
 or x86); <<part3>> uses it to build an entire operating system with one command:
 
@@ -144,13 +144,13 @@ the measured difference between unoptimized and fully optimized translation is m
 Comparing e.g. `-O0` with `-O2` for C compilers on realistic benchmark suites yields a typical factor between two and three on average
 footnote:[Averaged so that no single benchmark dominates; single benchmarks, and microbenchmarks in particular,
 scatter widely in both directions and prove nothing on their own; the suite average is the number that predicts real performance.];
-published measurements on standard suites report averages in the same range (see <<TBD>>).
+published measurements on standard suites report averages in the same range (see e.g. <<R11>>).
 Over the same decades in which optimizers grew to this factor,
 processors became faster by a factor of sixty to a hundred for the identical unoptimized code:
 a program whose performance was judged acceptable on a workstation of the early nineties
 runs nearly two orders of magnitude faster today before any optimizer has touched it.
 
-A state-of-the-art optimizing infrastructure (such as <<TBD>>) comprises millions of lines of code,
+A state-of-the-art optimizing infrastructure (such as <<R12>>) comprises millions of lines of code,
 maintained by corporations. The costs are not only lines and work: optimizing compilers are big and slow,
 and their output no longer corresponds to the source under a debugger.
 A compiler small enough to be read, fast enough to be rerun without thought,

@@ -118,7 +118,7 @@ usually in a leaner form.
 Go and Micron do not descend from one another,
 but they share ancestors and an attitude.
 The module/package with explicit exports, the composition-over-inheritance
-instinct, structural embedding of records, the refusal of implicit
+instinct (studied empirically in <<R13>>), structural embedding of records, the refusal of implicit
 conversions between integer types, fast whole-program compilation:
 a Go programmer recognizes the Oberon inheritance in Go the moment
 Micron makes it visible again.

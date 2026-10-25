@@ -7,7 +7,7 @@ This appendix collects the operational facts in one place:
 how the system is built and started, and the design decisions of the port in
 summary form.
 It condenses the design description that accompanies the sources
-("The Micron Project Oberon System, design description", Design.md),
+("The Micron Project Oberon System, design description", Design.md <<R19>>),
 which remains the authoritative document and covers each point in more depth.
 
 ==== Build and startup
@@ -34,6 +34,7 @@ Modules::
 There is no loader and no boot linker.
 `Modules.Load` finds the descriptor of an already linked module and creates
 it on demand; `Kernel.modules` is the list of these descriptors.
+See <<ch20>>.
 
 Memory::
 The Kernel owns the heap; `new` and `newgc` reach it through the `MIC$`
@@ -55,7 +56,7 @@ and end of usable RAM (`displayBase - 16`) at `010H`.
 `Kernel` and `Display` read the header instead of using constants.
 With `--ram 1` the layout is bit-for-bit Wirth's and an original Oberon disk
 image still boots; the system itself runs with 4 MB.
-See <<ch18>>.
+See <<ch18>> and <<ch21>>.
 
 Machine access::
 There is no `SYSTEM` module.
@@ -71,7 +72,7 @@ See <<ch12>> and <<ch19>>.
 Arithmetic::
 Address and size computations moved to the unsigned domain;
 Oberon's truncating division survives as `obdiv`/`obmod` where the original
-algorithms depend on it. See TBD.
+algorithms depend on it. See <<ch20>> and <<ch21>>.
 
 Not implemented::
 The port has no traps and no dynamic module loading;
