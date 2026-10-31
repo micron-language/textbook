@@ -1,0 +1,30 @@
+[discrete]
+== Colophon
+
+© 2026 Rochus Keller.
+
+This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+International (CC BY-NC-SA):
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+
+Cite as: Keller, R.: *Programming in Micron*. Version {revnumber}, {revdate}.
+https://doi.org/10.5281/zenodo.23649557
+
+
+You are free to copy and redistribute the material in any medium or format, and to remix,
+transform, and build upon it, provided that you give appropriate credit, provide a link to the licence,
+indicate whether changes were made, use the material only for non-commercial purposes,
+and distribute adaptations under the same licence.
+
+
+Commercial use, including commercial publication, distribution, or sale of this work or adapted material,
+requires the prior written permission of the copyright holder.
+
+
+Sources and incremental releases: https://github.com/micron-language/textbook/.
+Comments and corrections: https://github.com/micron-language/textbook/issues.
+
+
+Written in LeanDoc and typeset with Asciidoctor PDF in Noto.
+Cover and logo design by https://www.fiverr.com/myerscover26.

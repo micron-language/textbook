@@ -56,7 +56,7 @@ What C programmers must actually give up is small: the preprocessor
 (imports are semantic, constants are `const`, conditional compilation is
 a source directive, <<ch11>>); the textual header file (the compiler
 extracts interfaces itself, <<ch05>>); variadic functions (an array
-argument takes their place, <<ch05>>); and `malloc`'s untyped bytes
+argument takes their place, <<ch05>>); and the untyped bytes of `malloc`
 (`new` allocates a typed value, <<ch08>>).
 In exchange, the linker model becomes trivial, a build is `micc` on the
 root module (<<ch02>>), and the FFI chapter (<<ch13>>) shows that the C

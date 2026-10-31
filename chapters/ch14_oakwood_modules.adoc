@@ -229,7 +229,7 @@ readers coming from C will miss `printf` and `malloc`.
 None of these is an oversight.
 Oakwood's `In` reads from "the current input", a concept from the Oberon System
 where input is a marked text; on a host system `Files.System(Stdin)` and the
-`Files` read procedures do the job without a second convention and without `In`'s global `Done` flag.
+`Files` read procedures do the job without a second convention and without the global `Done` flag of `In`.
 Oakwood's `Strings` assumes arrays that know their length, which Micron arrays do not (<<ch06>>);
 a string library for Micron must be designed with explicit
 capacities and is part of the standard library work.
@@ -244,3 +244,5 @@ and understand in a minute, no hidden runtime behind them, and a stated rule
 where uniformity matters, as in the `Files` result convention.
 The next chapter uses the largest of the modules, `Screen`,
 to put interactive graphics on the same foundation.
+
+

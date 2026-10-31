@@ -14,6 +14,8 @@ The text is published incrementally, as the chapters are written/reviewed.
 
 Here is a preliminary PDF: http://software.rochus-keller.ch/micron-textbook.pdf
 
+The book now also has an official doi number: https://doi.org/10.5281/zenodo.23649557
+
 Comments, corrections and questions are welcome; please use the issue tracker.
 
 

@@ -1,0 +1,36 @@
+// tag::exceptions[]
+module Exceptions [exceptions]      // level 3 by default; the attribute enables pcall and raise
+
+var
+    Overflow: integer               // its address identifies the exception
+    res: pointer to any
+
+procedure push(x: integer)
+begin
+    println("push")
+    if x > 10 then raise(@Overflow) end
+    println("pushed")
+finally
+    println("push finally")         // runs on return and on raise
+end push
+
+procedure fill(n: integer)
+var i: integer
+begin
+    i := 1
+    while i <= n do push(i * 6); inc(i) end
+    println("filled")
+finally
+    println("fill finally")
+end fill
+
+begin
+    pcall(res, fill, 1)
+    println(res = nil)              // true: no exception
+    pcall(res, fill, 2)
+    if res = @Overflow then println("got Overflow")
+    elsif res = nil then println("no exception")
+    else println("unknown exception")   // raise(res) would propagate it
+    end
+end Exceptions
+// end::exceptions[]

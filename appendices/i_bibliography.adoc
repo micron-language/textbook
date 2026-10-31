@@ -4,39 +4,38 @@
 
 - [[[R1]]] R. Keller:
   *Oberon+ Language Report.*
-  oberon-lang.github.io.
+  https://github.com/oberon-lang/specification.
 - [[[R2]]] N. Wirth, J. Gutknecht:
   *Project Oberon. The Design of an Operating System, a Compiler, and a Computer.*
-  Edition 2013. projectoberon.net.
+  Edition 2013. https://projectoberon.net.
 - [[[R3]]] A. Goldberg, D. Robson:
   *Smalltalk-80: The Language and its Implementation.*
   Addison-Wesley, 1983.
 - [[[R4]]] S. Pemberton, M. Daniels:
   *Pascal Implementation: The P4 Compiler and Interpreter.*
-  Ellis Horwood, 1982. homepages.cwi.nl/~steven/pascal.
+  Ellis Horwood, 1982. https://homepages.cwi.nl/~steven/pascal.
 - [[[R5]]] R. Keller:
   *Are We Fast Yet? Micron Implementations.*
-  github.com/rochus-keller/Are-we-fast-yet/tree/main/Micron.
+  http://github.com/rochus-keller/Are-we-fast-yet/tree/main/Micron.
 - [[[R6]]] N. M. Holm:
   *Scheme 9 from Empty Space.*
-  Lulu Press, 2007ff. t3x.org.
+  Lulu Press, 2007ff. https://t3x.org.
 - [[[R7]]] H. Mössenböck, N. Wirth:
   *The Programming Language Oberon-2.*
   ETH Zürich, 1992/1996.
 - [[[R8]]] N. Wirth:
   *The Programming Language Oberon.*
-  Oberon-07 revision, 2013/2016. projectoberon.net.
+  Oberon-07 revision, 2013/2016. https://projectoberon.net.
 - [[[R9]]] R. Keller:
   *The Micron Programming Language Specification.*
-  Distributed with the Micron source repository <<R21>>.
-- [[[R10]]] *The Oakwood Guidelines for Oberon-2 Compiler Developers.*
-  1995.
+  https://github.com/micron-language/specification/.
+- [[[R10]]] *The Oakwood Guidelines for Oberon-2 Compiler Developers.* 1995.
 - [[[R11]]] A. Rimsa Álvares, J. N. Amaral, F. M. Quintão Pereira:
   *Instruction Visibility in SPEC CPU2017.*
   Journal of Computer Languages 66, 2021.
 - [[[R12]]] C. Lattner, V. Adve:
   *LLVM: A Compilation Framework for Lifelong Program Analysis & Transformation.*
-  Proceedings of CGO, 2004. llvm.org.
+  Proceedings of CGO, 2004. https://llvm.org.
 - [[[R13]]] F. Schmager, N. Cameron, J. Noble:
   *GoHotDraw: Evaluating the Go Programming Language with Design Patterns.*
   Proceedings of PLATEAU (Workshop on Evaluation and Usability of Programming Languages and Tools), 2010.
@@ -48,33 +47,35 @@
   Proceedings of the Dynamic Languages Symposium, 2016.
 - [[[R16]]] N. Wirth:
   *Programming in Oberon. A Tutorial.*
-  projectoberon.net.
+  https://projectoberon.net.
 - [[[R17]]] M. Reiser, N. Wirth:
   *Programming in Oberon. Steps beyond Pascal and Modula.*
-  Addison-Wesley, 1992. people.inf.ethz.ch/wirth.
+  Addison-Wesley, 1992. https://people.inf.ethz.ch/wirth.
 - [[[R18]]] R. Ierusalimschy:
   *Programming in Lua.*
-  Fourth edition. Lua.org, 2016.
+  Fourth edition. 2016. https://www.lua.org/pil/.
 - [[[R19]]] R. Keller:
   *The Micron Project Oberon System, Design Description.*
-  Design.md, kept with the system sources.
+  https://github.com/rochus-keller/Micron/blob/master/examples/MicronSystem/Design.md.
 - [[[R20]]] J. Hennessy et al.:
   *The Stanford Integer Benchmarks* ("Hennessy suite"),
   as circulated with Oberon systems.
 - [[[R21]]] R. Keller:
   *Micron. A Systems Programming Language and Compiler.*
-  github.com/rochus-keller/micron.
+  https://github.com/rochus-keller/micron.
 - [[[R22]]] N. Wirth:
   *Project Oberon: The Computer.*
-  projectoberon.net.
+  https://projectoberon.net.
 - [[[R23]]] *ECMA-335: Common Language Infrastructure (CLI).*
   ECMA International, sixth edition, 2012.
 - [[[R24]]] N. Wirth:
   *How to Use the Oberon System.*
-  projectoberon.net.
+  https://projectoberon.net.
 - [[[R25]]] N. Wirth:
   *Compiler Construction.*
-  projectoberon.net.
+  https://projectoberon.net.
 - [[[R26]]] R. Griesemer, R. Pike, K. Thompson, et al.:
   *The Go Programming Language Specification.*
-  go.dev/ref/spec.
+  https://go.dev/ref/spec.
+  
+  

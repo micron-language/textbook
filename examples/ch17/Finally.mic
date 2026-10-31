@@ -1,0 +1,22 @@
+module Finally [level = 2]
+
+// tag::finally[]
+procedure find(const a: ^array of int32; n: uint32; x: int32): int32
+var i: uint32
+begin
+    println("search")
+    i := 0
+    while i < n do
+        if a[i] = x then return sigc(i) end    // the finally section runs here too
+        inc(i)
+    end
+    return -1
+finally
+    println("done")                            // on every exit path
+end find
+// end::finally[]
+
+begin
+    println(find(@{4, 8, 15}, 3, 8))      // search, done, 1
+    println(find(@{4, 8, 15}, 3, 9))      // search, done, -1
+end Finally

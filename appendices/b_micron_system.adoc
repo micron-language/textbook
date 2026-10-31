@@ -26,7 +26,7 @@ initialization the boot linker generates.
 `Main` is the last body to run and plays the role of Wirth's boot linker for
 the outer core: it registers the commands of `System`, `Edit`, `Draw` and the
 example modules with `Modules.Register`, and it enters `Oberon.Loop`,
-which in Wirth's system is entered at the end of `Oberon`'s own body.
+which in Wirth's system is entered at the end of the `Oberon` body.
 
 ==== The design decisions in summary
 

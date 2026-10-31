@@ -1,0 +1,17 @@
+module Asserts [level = 1]
+
+// tag::assert[]
+procedure sqrtApprox(x: integer): integer
+var r: integer
+begin
+    assert(x >= 0)
+    r := 0
+    while (r+1)*(r+1) <= x do inc(r) end
+    return r
+end sqrtApprox
+// end::assert[]
+
+begin
+    println(sqrtApprox(10))     // 3
+    println(sqrtApprox(49))     // 7
+end Asserts

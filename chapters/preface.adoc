@@ -71,4 +71,9 @@ Where the Micron System follows Wirth's original design,
 the book does not repeat what Wirth and Gutknecht explain better;
 their books are freely available at https://projectoberon.net/ and are referenced throughout.
 
+=== Acknowledgements
+
+Micron stands on the work of Niklaus Wirth and the Oberon tradition.
+
+TBD
 

@@ -1,0 +1,145 @@
+[[ch17]]
+=== Error Handling, FINALLY and Exceptions
+
+C offers return codes and setjmp; C++ offers exceptions plus destructors and twenty years
+of coding standards restricting both; Go returns error values and keeps panic for the irrecoverable.
+Micron's answer is layered like the rest of the language:
+result codes and assertions everywhere, `finally` sections from level 2,
+and a minimal exception mechanism from level 3, defined as two predeclared procedures
+rather than as syntax and switched on per module.
+
+==== Expected failures: result codes
+
+For failures that are part of a procedure's ordinary contract, a file that does not exist,
+a buffer that is full, a parse that does not match, Micron code returns values,
+as C and Go code does and as Project Oberon always did.
+The system's Modules layer is typical: it exports a result variable `res`,
+set to 0 on success and to a small documented number on each failure,
+and callers test it after the call.
+Nothing in the language privileges this style; records returning a status field,
+boolean function results, or a nil pointer for a failed lookup serve the same purpose.
+What the language contributes is what it omits: no errno-like hidden global is needed,
+because modules can export their own state, and no exception is thrown for events
+that are not exceptional.
+
+==== Broken invariants: assert and halt
+
+For conditions that must hold if the program is correct, the tool is `assert`:
+
+[source]
+----
+include::../examples/ch17/Asserts.mic[tag=assert]
+----
+
+A failing assertion aborts the program.
+On a hosted target that means program termination with a diagnostic;
+on a freestanding target the report goes wherever the system directs it,
+in the Micron System to the serial console, after which the machine halts.
+`halt(n)` aborts unconditionally with a code, for the cases where the program itself
+detects that continuing would do damage.
+Neither construct is for expected failures; both mark the boundary between a program
+that is wrong and one that merely encountered an uncooperative world.
+
+==== Cleanup: the finally section
+
+From level 2, a procedure body may end with a `finally` section:
+
+[source]
+----
+include::../examples/ch17/Finally.mic[tag=finally]
+----
+
+The statements after `finally` run whenever the `begin` section terminates:
+by falling off the end, through any `return`, or through an exception passing by (below).
+Both calls of `find` therefore print `search` and `done`, whether the element is found or not.
+A `return` expression is evaluated before the section runs, and `return` itself
+is illegal inside the section, so cleanup cannot alter the result;
+a `goto` can neither enter nor leave the section.
+The typical content is the release of a resource acquired in the `begin` section:
+
+[source]
+----
+procedure copy(const from, to: ^array of char)
+var f, g: Files.File
+begin
+    f := Files.Open(from, Files.ReadOnly)
+    if f = nil then return end
+    g := Files.Open(to, Files.Create)
+    // ... copy, may return early at any point ...
+finally
+    if f # nil then Files.Close(f) end
+    if g # nil then Files.Close(g) end
+end copy
+----
+
+This is the C++ destructor benefit, resources released on every exit path,
+without the machinery that destructors require: no constructors, no object lifetimes
+entangled with scopes, no exception safety levels.
+The cost is honesty about what it is not: cleanup is per procedure, not per object,
+so a resource that outlives the procedure still needs explicit ownership discipline (<<ch08>>).
+Where C programmers write `goto cleanup`, and Micron accepts that idiom too (<<ch05>>),
+the `finally` section says the same thing structurally,
+and it cannot be bypassed by an early `return` added later, which is precisely
+the maintenance error the goto pattern invites.
+
+==== The escape hatch: pcall and raise
+
+Levels 3 and above optionally provide exceptions, deliberately shaped as library-like
+primitives rather than syntax: no `try`, no `catch`, no exception class hierarchy,
+no predefined exceptions.
+A module that wants to use them says so in its attributes, `module M [exceptions]`;
+without the attribute, `pcall` and `raise` are compile-time errors.
+
+An exception is a value of type `pointer to any`.
+`raise(e)` terminates the most recent protected call;
+raising without an active `pcall` runs the pending `finally` sections and aborts the program.
+`pcall(res, P, args...)` calls the proper procedure `P` protectedly, with the given arguments:
+if `P` returns normally, `res` is nil; if `raise(e)` was called in `P` or below it, `res` is `e`.
+`P` must be a proper procedure or a procedure variable, not a predeclared, inline or type-bound procedure.
+The following module exercises the whole mechanism:
+
+[source]
+----
+include::../examples/ch17/Exceptions.mic[tag=exceptions]
+----
+
+The address of a module variable serves as the exception's identity;
+a record behind the pointer can carry information.
+Since the handler inspects the pointer after the raising frames are gone,
+the object must outlive them: a module variable or a heap object, never a local.
+`raise()` without argument raises a pointer that differs from the address of every object,
+for the cases where only the fact of an exception matters.
+Propagation is explicit: a handler that cannot deal with `res` calls `raise(res)` again.
+When an exception unwinds the call chain, the `finally` sections of the frames
+between `raise` and `pcall` run in reverse call order,
+so the cleanup guarantee of the previous section holds under exceptions too.
+The example shows both outcomes: the first `pcall` returns normally and `res` is nil;
+in the second, the raise in `push` runs the `finally` sections of `push` and then of `fill`,
+`filled` is never printed, and `res` identifies the exception.
+What `pcall` does not catch are failing assertions, `halt`, arithmetic traps and hardware faults:
+they terminate the program, as described above.
+
+Readers will recognize the model: it is closer to Go's `panic`/`recover`
+than to C++ or Java exceptions, and closer still to Oberon's escape-free discipline,
+since nothing forces anyone to use it.
+A library that returns result codes remains as is;
+`pcall` exists for the genuinely non-local cases, a parser bailing out of deep recursion,
+a command interpreter surviving a failing command, and for implementing
+fault barriers like the Micron System's command loop.
+As many other features of Micron, `raise` and `pcall` come from Oberon+ and Luon, 
+but ultimately from the Lua programming language <<R18>>.
+
+==== Choosing among them
+
+The rules of thumb this book uses, and <<part3>> applies:
+
+- Failure is part of the contract: return a result code or nil, document it, test it.
+- The program would be wrong to continue: `assert` for invariants during development
+  and at module boundaries, `halt` for detected impossibilities.
+- A resource must be released on every path out of a procedure: `finally`.
+- A whole subcomputation must be abandonable without threading status through
+  every layer: `pcall`/`raise`, sparingly, behind a module boundary.
+
+The levels enforce the direction of dependence: a level 1 driver cannot acquire
+an exception habit, because the mechanism does not exist there,
+and a level 3 application that uses `pcall` cannot impose it on the layers below it.
