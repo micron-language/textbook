@@ -1,0 +1,127 @@
+[[ch11]]
+=== Compile-Time Programming
+
+C projects of any size grow a second program: the one written in preprocessor directives,
+build-system variables and generated headers, executed before the compiler itself starts.
+Micron takes the position that most of this second program is unnecessary
+if the language itself evaluates enough at compile time.
+This chapter collects the compile-time machinery: constant expressions, `invar` procedures,
+compile-time queries, configuration variables and conditional compilation.
+Generic modules, the largest compile-time facility, have been discussed in <<ch10>>.
+
+==== Constant expressions
+
+A `const` declaration binds an identifier to a value computed at compile time.
+Constant expressions may use the declared constants, the arithmetic, logical and set operators,
+and the predeclared functions that the compiler can evaluate:
+
+[source]
+----
+include::../examples/ch11/Comptime.mic[tag=consts]
+----
+
+Constants declared this way parametrize types: `WORDS` is a legal array length,
+computed from a buffer size in bytes and the size of the element type.
+Where a C programmer writes `#define BUFSIZE (16*1024)` and hopes every use site agrees
+about types and parentheses, the Micron constant is a typed value with a scope
+and participates in type checking like any other value.
+
+==== Compile-time queries
+
+Several predeclared functions are compile-time operations on types rather than run-time
+operations on values:
+
+- `size(T)` yields the number of bytes a value of type T occupies, as a compile-time constant.
+  It is deliberately limited to simple types at compile time; the size of a record or array requires a backend operation.
+- `len(v)` yields the length of a non-open array, known statically from the declaration.
+- `min(T)` and `max(T)` yield the smallest and largest value of a basic type, as in `const TOP = max(int16)`.
+- `default(T)` yields the zero value of a basic type: zero for numbers and characters,
+  false for booleans, the empty set for sets.
+
+Micron is designed to replace a whole family of C idioms: `sizeof` arithmetic, `<limits.h>`,
+and the hand-maintained `#define N (sizeof a / sizeof a[0])`.
+
+==== Invar procedures as compile-time functions
+
+<<ch05>> introduced `invar`: an ordinary procedure which the compiler can in addition execute itself.
+Since an invar procedure inspects no run time state,
+a call with constant arguments is a constant expression,
+and the compiler evaluates it wherever a constant is required:
+
+[source]
+----
+include::../examples/ch11/Comptime.mic[tag=invar]
+----
+
+`width` is an ordinary recursive function; `INDEXBITS` is 12,
+computed by the compiler from `WORDS`, and `index` has 12 elements.
+The same `width` called with a variable argument runs at run time, with the same result for the same argument.
+This is Micron's replacement for the computed macros and constexpr functions of C and C\++:
+one procedure, usable at compile time when the arguments are constant
+and at run time when they are not, with a single semantics and no annotation at the call site
+beyond the `invar` in its declaration.
+
+The rules follow from the evaluation time.
+An invar procedure may access its parameters, its local variables, constants and string literals,
+but no module variables;
+it may call only invar procedures and the predeclared procedures the compiler can evaluate,
+not procedure variables, type-bound or `extern` procedures.
+Parameters, local variables and the result must be of basic, enumeration or fixed-size array types;
+a `const` open array of `char` is allowed as parameter, so that string literals can be passed.
+Pointers, records and objects are excluded, since there is no memory for them at compile time.
+The compiler checks these rules at the declaration, not at the call,
+so a procedure is either usable at compile time or it is not.
+A failing `assert` or a `halt` during compile-time evaluation is a compile-time error.
+Invar procedures may be recursive, but an invar procedure cannot be evaluated before its body is known,
+so a forward declaration (<<ch05>>) does not suffice for a compile-time call.
+
+==== Configuration variables and conditional compilation
+
+Some variation points are genuinely external to the program: which platform, which board,
+whether a debug build.
+Micron handles them with configuration variables: named string values which are set
+when the compiler is invoked, for example `micc -D DEBUG -D BUFSIZE=8192 Main.mic`
+(a variable given without a value is `TRUE`), and which are fixed for the whole compilation.
+The source text cannot set or change them, so a module means the same wherever it is compiled
+in the same invocation; the Oakwood directives `<* DEBUG+ *>` and `<* DEBUG- *>` <<R10>>
+are deliberately not supported.
+
+Configuration variables are used in two ways.
+Conditional compilation directives, written in `<* *>` brackets, select source text:
+
+[source]
+----
+include::../examples/ch11/Comptime.mic[tag=conditional]
+----
+
+The conditions are boolean expressions over configuration variables,
+a variable that is not set counts as false,
+and only the selected section is visible to the compiler.
+The mechanism is deliberately weaker than the C preprocessor: directives select sections of an
+otherwise ordinary source text; there is no token pasting, no macro expansion,
+and nothing that changes the meaning of the code it guards.
+
+The predeclared function `getenv` reads a variable as a typed constant:
+
+[source]
+----
+include::../examples/ch11/Comptime.mic[tag=getenv]
+----
+
+`getenv(T, name, default)` is a constant expression of type T,
+the value of the variable converted to T, or the default if it is not set;
+without a default, `default(T)` is used.
+T may be an integer, floating-point, boolean, char, enumeration or character array type,
+and a value that does not convert, `-D BUFSIZE=big` for a `uint32`, is a compile-time error.
+This is where sizes, frequencies and feature selections of a build enter the program,
+through the type system instead of through `-DBUFSIZE=8192` pasted into the source as text.
+
+==== The sum of the parts
+
+None of these facilities is large, and that is the point.
+Constant expressions, compile-time queries, invar procedures, configuration variables
+and generic modules with constant meta parameters together cover what the C preprocessor,
+`constexpr`, `<limits.h>` and a template subset provide,
+while remaining inside the ordinary syntax and type system of the language.
+There is no second language to learn, and nothing that a reader of the source text
+cannot evaluate in the head with the rules of the first one.

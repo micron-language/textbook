@@ -2,7 +2,7 @@
 [appendix]
 === Reading MIL
 
-`micc` compiles Micron to MIL, the Micron Intermediate Language,
+`micc` compiles Micron to MIL, the Micron Intermediate Language <<R9>>,
 before generating native code or interpreting.
 MIL is inspired by the ECMA-335 <<R23>> (.NET) common intermediate language with the
 baggage removed: a typed stack machine with modules, procedures and the

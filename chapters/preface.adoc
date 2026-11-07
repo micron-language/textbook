@@ -73,7 +73,7 @@ their books are freely available at https://projectoberon.net/ and are reference
 
 === Acknowledgements
 
-Micron stands on the work of Niklaus Wirth and the Oberon tradition.
-
-TBD
+I am grateful to Niklaus Wirth for what he taught me about programming languages and compiler construction. 
+Micron stands on his work and the Oberon tradition.
+The Micron System presented in this book builds on Project Oberon by Niklaus Wirth and Jürg Gutknecht.
 

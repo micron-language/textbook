@@ -82,6 +82,7 @@ The header is the same for all kinds of block, so Wirth's three trap entry point
 reached through the callbacks.
 
 .A heap block; the pointer the program holds refers past the header
+[listing]
 ----
 block start                                  p (what the program holds)
 v                                            v

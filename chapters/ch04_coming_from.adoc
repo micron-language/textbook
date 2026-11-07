@@ -171,3 +171,5 @@ What all three readers can rely on: the language is small enough to hold
 in one head, the compiler is fast enough to keep up with thought,
 and nothing happens at run time that the program text does not show.
 The systematic treatment starts on the next page.
+
+

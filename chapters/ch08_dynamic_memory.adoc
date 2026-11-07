@@ -14,6 +14,7 @@ because a Micron variable lives in one of three places,
 and the place determines its lifetime:
 
 .The three storage classes and their lifetimes (the Micron System's arrangement)
+[listing]
 ----
 low addresses
 +--------------------+
@@ -87,6 +88,7 @@ refers to the first of three records, each allocated by its own `new`
 and each holding the address of the next:
 
 .A linked list: one static pointer, three heap records
+[listing]
 ----
 module variable        heap
 +------+       +-----------+      +-----------+      +-----------+

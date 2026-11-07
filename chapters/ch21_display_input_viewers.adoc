@@ -106,6 +106,7 @@ The data structure behind the tiling is a two-level ring of frames,
 anchored in one filler viewer per track:
 
 .The tiled display and the frame rings that describe it
+[listing]
 ----
 screen                          data structure
 +--------------+-------+

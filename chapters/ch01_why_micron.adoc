@@ -185,19 +185,3 @@ no threads in the language, no WCHAR.
 These are not omissions, but considered decisions.
 The design consistently prefers the explicit to the convenient: a Micron program contains, on its face, everything that happens.
 
-==== The plan of the book
-
-<<ch02>> walks through a complete program and the toolchain.
-<<ch03>> introduces the notation and the type system,
-including the signedness discipline that distinguishes Micron most visibly from its ancestors.
-<<ch04>> addresses readers arriving from C, Pascal or Go directly, with the reasoning behind the differences.
-The remaining chapters of <<part2>> cover the language in depth, ascending the levels: program structure, structured types,
-abstraction without object-orientation (bound procedures, delegates, interfaces), dynamic memory,
-object-oriented programming, generic modules, compile-time programming, low-level programming, interfacing with C,
-the library modules and graphics, a worked exercise in stepwise refinement, and error handling.
-<<part3>> applies the language to a real system: the Micron System,
-a faithful port of Project Oberon to Micron on an emulated RISC-V machine, covering the kernel,
-memory management and garbage collector, file system, display, viewers, text system and applications,
-rounded up with further case studies.
-The appendices contain the tool documentation, the machine description, reference tables,
-and translation guides from C and Pascal.

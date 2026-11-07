@@ -19,7 +19,7 @@ Licence text: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 = Programming in Micron
 Rochus Keller
-v0.10, 2026-10-31
+v0.11 rc, 2026-11-07
 :toc: preamble
 :toclevels: 2
 :numbered:
@@ -37,7 +37,12 @@ include::chapters/preface.adoc[]
 
 This part explains why the Micron programming language exists, what using it looks like,
 and it lays down the vocabulary the rest of the book depends on.
-TBD
+<<ch01>> makes the case for another systems language, positioning Micron against C, the Pascal lineage and Go.
+<<ch02>> takes a tour through complete programs and the toolchain to prepare the reader for the details.
+<<ch03>> introduces the notation and lays the ground every later chapter builds on: the types, the literals, and the strict
+separation of signed and unsigned integers that distinguishes Micron most visibly from its ancestors.
+<<ch04>> addresses readers arriving from C, Pascal or Go directly, with the reasoning behind the differences.
+
 
 include::chapters/ch01_why_micron.adoc[]
 include::chapters/ch02_tour.adoc[]
@@ -48,8 +53,15 @@ include::chapters/ch04_coming_from.adoc[]
 [part]
 == The Language in Depth
 
-This part covers the language feature by feature.
-TBD
+This part covers the language feature by feature, roughly in the order of the
+language levels introduced in <<ch02>>: from the structure every program has, modules, 
+procedures and statements, through structured types, abstraction and
+dynamic memory, to objects, generics, compile-time programming, the low-level
+constructs and the C boundary, then the library modules that accompany
+the compiler, ending with error handling.
+Each chapter explains what problem a feature solves, at which level it becomes available,
+and where Micron deliberately differs from Oberon, Pascal, C or Go.
+Every listing is a compilable program or an excerpt of one; the sources accompany the book.
 
 include::chapters/ch05_program_structure.adoc[]
 include::chapters/ch06_structured_types.adoc[]
@@ -57,11 +69,7 @@ include::chapters/ch07_abstraction_without_oop.adoc[]
 include::chapters/ch08_dynamic_memory.adoc[]
 include::chapters/ch09_oop.adoc[]
 include::chapters/ch10_generic_modules.adoc[]
-
-[[ch11]]
-=== Compile-Time Programming
-TBD
-
+include::chapters/ch11_compile_time.adoc[]
 include::chapters/ch12_low_level.adoc[]
 include::chapters/ch13_c_interop.adoc[]
 include::chapters/ch14_oakwood_modules.adoc[]
@@ -70,12 +78,30 @@ include::chapters/ch16_stepwise_refinement.adoc[]
 include::chapters/ch17_error_handling.adoc[]
 
 
-
 [[part3]]
 [part]
 == Systems Programming — The Micron System
 
-Present the Micron System, a port of Niklaus Wirth and Jürg Gutknecht's Project Oberon (edition 2013) to Micron.
+In this chapter, the Micron System is presented,
+which is a port of Niklaus Wirth and Jürg Gutknecht's Project Oberon (edition 2013) <<R2>> to Micron,
+an operating system with a file system, a garbage collector, a display,
+an editor and a graphics application, in 27 modules, on an emulated machine,
+with no C underneath.
+An operating system is the natural showcase for this book because it exercises everything <<part2>> introduced, 
+at every level of the language:
+memory-mapped devices and register access at the bottom,
+procedure variables and Wirth's message-based object style in the viewers,
+the garbage collector both implemented (in the Kernel) and used (above it).
+Where Oberon needed the SYSTEM pseudo-module and a boot linker,
+Micron has all in the language, and the result is one linked image.
+
+The chapters follow the system bottom-up, from the machine to the applications.
+Wirth and Gutknecht's book remains the reference for the design;
+the following chapters presume no prior reading of it, but they focus on what Micron
+makes different and quote the original only where the contrast teaches something.
+None of it is specific to operating systems: the same techniques serve anyone writing firmware,
+drivers, runtimes or any other program that owns its machine.
+
 
 include::chapters/ch18_machine_and_build.adoc[]
 include::chapters/ch19_kernel.adoc[]
@@ -89,7 +115,14 @@ include::chapters/ch24_case_studies.adoc[]
 [part]
 == Appendices
 
-TBD
+Here you can find
+the instructions to reproduce every example in the book (<<app-a>>),
+to build and run the Micron System (<<app-b>>),
+the relation between Wirth's RISC-5 machine and the RV32 target (<<app-c>>),
+a reader's guide to MIL dumps (<<app-d>>),
+and some reference material, such as syntax, predeclared identifiers,
+the language levels, translation tables from Oberon, Pascal, C and Go, and the bibliography.
+
 
 include::appendices/a_tools.adoc[]
 include::appendices/b_micron_system.adoc[]

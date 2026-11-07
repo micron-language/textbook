@@ -48,11 +48,13 @@ var
     i, j: integer
 
 begin
-    // see TESTLATER.md #3: record constructors are not implemented yet;
-    // the book shows s1 := Shape{ kind: rect, r: Rect{ Point{1,2}, 10, 20 } }
+    <* if USE_CONSTRUCTOR then *>
+    s1 := Shape{ kind: rect, r: Rect{ Point{1,2}, 10, 20 } }
+    <* else *>
     s1.kind := rect
     s1.r.origin.x := 1; s1.r.origin.y := 2
     s1.r.w := 10; s1.r.h := 20
+    <* end *>
     s2.kind := circle
     s2.radius := 5
 

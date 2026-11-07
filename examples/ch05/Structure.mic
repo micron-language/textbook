@@ -1,8 +1,5 @@
 module Structure
 
-// see TESTLATER.md #2: invar is partially implemented; calling an invar
-// procedure (at run time or in a const declaration) does not work yet, so
-// cube is only declared here; the const usage is shown in prose only.
 // tag::invar[]
 procedure cube(x: integer): integer invar
 begin

@@ -1,0 +1,58 @@
+module Comptime
+
+// Run with   micc --run Comptime.mic
+// and with   micc --run -D DEBUG -D BUFSIZE=8192 Comptime.mic
+// to see the effect of the configuration variables.
+
+// tag::consts[]
+const
+    KB       = 1024
+    BUFSIZE  = 16 * KB
+    WORDS    = BUFSIZE div size(integer)
+    ALLBITS  = {0..31}
+// end::consts[]
+
+// tag::invar[]
+procedure width(n: uint32): uint32 invar    // number of bits needed for n
+begin
+    if n < 2 then return 1 else return 1 + width(n div 2) end
+end width
+
+const
+    INDEXBITS = width(WORDS - 1)             // 12, computed by the compiler
+
+var
+    index: array INDEXBITS of boolean       // a constant like any other
+// end::invar[]
+
+// tag::getenv[]
+const
+    BUFBYTES = getenv(uint32, "BUFSIZE", 4096)  // from micc -D BUFSIZE=...
+    DEBUG    = getenv(boolean, "DEBUG")         // false if not set
+// end::getenv[]
+
+var
+    buf: array WORDS of integer
+    c: char
+    n: uint32
+
+begin
+    println(WORDS)          // 4096
+    println(len(buf))       // 4096, compile-time length
+    c := default(char)      // see bugreports/Bug6_DefaultCompare.mic
+    println(c = 0x)         // true
+    println(INDEXBITS)      // 12
+    println(len(index))     // 12
+    n := 1000
+    println(width(n))       // 10, the same procedure at run time
+    println(BUFBYTES)       // 4096, or the value given with -D BUFSIZE
+    println(DEBUG)          // false, or true with -D DEBUG
+
+    // tag::conditional[]
+    <* if DEBUG then *>
+    println("checked build")
+    <* else *>
+    println("fast build")
+    <* end *>
+    // end::conditional[]
+end Comptime

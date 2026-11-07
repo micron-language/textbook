@@ -7,7 +7,7 @@
   https://github.com/oberon-lang/specification.
 - [[[R2]]] N. Wirth, J. Gutknecht:
   *Project Oberon. The Design of an Operating System, a Compiler, and a Computer.*
-  Edition 2013. https://projectoberon.net.
+  Edition 2013. https://projectoberon.net (PO.System.pdf, PO.Applications.pdf and PO.Computer.pdf).
 - [[[R3]]] A. Goldberg, D. Robson:
   *Smalltalk-80: The Language and its Implementation.*
   Addison-Wesley, 1983.
@@ -25,9 +25,9 @@
   ETH Zürich, 1992/1996.
 - [[[R8]]] N. Wirth:
   *The Programming Language Oberon.*
-  Oberon-07 revision, 2013/2016. https://projectoberon.net.
+  Oberon-07 revision, 2013/2016. https://www.inf.ethz.ch/personal/wirth/Oberon/Oberon07.Report.pdf.
 - [[[R9]]] R. Keller:
-  *The Micron Programming Language Specification.*
+  *The Micron Programming and Intermediate Language Specifications.*
   https://github.com/micron-language/specification/.
 - [[[R10]]] *The Oakwood Guidelines for Oberon-2 Compiler Developers.* 1995.
 - [[[R11]]] A. Rimsa Álvares, J. N. Amaral, F. M. Quintão Pereira:
@@ -47,10 +47,10 @@
   Proceedings of the Dynamic Languages Symposium, 2016.
 - [[[R16]]] N. Wirth:
   *Programming in Oberon. A Tutorial.*
-  https://projectoberon.net.
+  https://people.inf.ethz.ch/wirth/Oberon/PIO.pdf.
 - [[[R17]]] M. Reiser, N. Wirth:
   *Programming in Oberon. Steps beyond Pascal and Modula.*
-  Addison-Wesley, 1992. https://people.inf.ethz.ch/wirth.
+  Addison-Wesley, 1992. https://people.inf.ethz.ch/wirth/ProgInOberonWR.pdf.
 - [[[R18]]] R. Ierusalimschy:
   *Programming in Lua.*
   Fourth edition. 2016. https://www.lua.org/pil/.
@@ -61,7 +61,7 @@
   *The Stanford Integer Benchmarks* ("Hennessy suite"),
   as circulated with Oberon systems.
 - [[[R21]]] R. Keller:
-  *Micron. A Systems Programming Language and Compiler.*
+  *Micron Compiler and Integrated Development Environment.*
   https://github.com/rochus-keller/micron.
 - [[[R22]]] N. Wirth:
   *Project Oberon: The Computer.*
@@ -73,7 +73,7 @@
   https://projectoberon.net.
 - [[[R25]]] N. Wirth:
   *Compiler Construction.*
-  https://projectoberon.net.
+  https://www.projectoberon.net/wirth/CompilerConstruction/CompilerConstruction.pdf.
 - [[[R26]]] R. Griesemer, R. Pike, K. Thompson, et al.:
   *The Go Programming Language Specification.*
   https://go.dev/ref/spec.
