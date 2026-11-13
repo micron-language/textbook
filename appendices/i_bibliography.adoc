@@ -77,5 +77,8 @@
 - [[[R26]]] R. Griesemer, R. Pike, K. Thompson, et al.:
   *The Go Programming Language Specification.*
   https://go.dev/ref/spec.
-  
+- [[[R27]]] R. Keller:
+  *The Micron Programming language - Book and example sources.*
+  https://github.com/micron-language/textbook/.
+
   

@@ -19,4 +19,3 @@ The book also has an official doi number: https://doi.org/10.5281/zenodo.2364955
 
 Comments, corrections and questions are welcome; please use the issue tracker.
 
-NOTE: the current version 0.11 of the book is the _release candidate_; the book is considered complete and ready for official release at this point; there is still work to do on the compiler before release.

@@ -79,6 +79,8 @@ virtual dispatch.
 An extension inherits fields and procedures, overrides some, and clients program against the base type.
 The `Figures` example is Simula OO in miniature, and for data that is genuinely hierarchical,
 a scene graph, an instruction set, a widget tree, it remains the most direct expression available.
+The "Objects" implementation in the "Are we fast yet" repository (<<R5>>) illustrates Simula OO
+and is particularly useful for comparison with the "Procedural" and "Hybrid" implementations.
 
 The second, _Wirth OO_, appears throughout Project Oberon <<R2>> and its Micron port:
 a record carries a procedure variable, the _handler_,

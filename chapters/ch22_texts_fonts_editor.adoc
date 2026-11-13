@@ -33,7 +33,7 @@ the original one and the unnamed scratch files that writers append typed input t
 The following example makes the invariant visible: 
 the text the user sees is the concatenation of the pieces in ring order, 
 while the characters sit unmoved in two files.
-After inserting the word `not ` in the middle of a sentence read from `doc`,
+After inserting the word ``not `` in the middle of a sentence read from `doc`,
 the ring holds three pieces where one was before:
 
 .A text after one insertion: three pieces, two files, no character moved

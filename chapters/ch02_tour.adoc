@@ -109,6 +109,7 @@ Micron does not mix signed and unsigned operands implicitly, a discipline that <
 
 The compiler `micc` covers the whole workflow of this book with four modes:
 
+[listing]
 ----
 micc --check Main.mic          # parse and typecheck only
 micc --run   Main.mic          # compile to MIL and interpret
@@ -122,6 +123,7 @@ the "Are We Fast Yet?" suite of <<ch07>> is run this way.
 Cross-compilation produces a statically linked ELF executable for a real instruction set (RISC-V 32-bit, ARMv7,
 or x86); <<part3>> uses it to build an entire operating system with one command:
 
+[listing]
 ----
 micc --target rv32 -g --base 0 --runtime MIC+.mil -I . -o Main Main.mic
 rv32vm --elf --ram 4 --disk disk.img Main

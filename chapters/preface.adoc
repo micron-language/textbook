@@ -2,7 +2,7 @@
 == Preface
 
 This book describes Micron, a systems programming language in the school of Niklaus Wirth, and shows how to use it:
-for ordinary programs, for libraries, and for an operating system that the reader can build and boot with one command.
+for ordinary programs, for libraries, and for an operating system that the reader can build and boot with one command each.
 
 Micron is not my first language design, and it did not appear out of nowhere.
 It is the result of a long journey, and the journey is perhaps worth telling.
@@ -65,11 +65,11 @@ the Scheme 9 virtual machine <<R6>>, and an Oberon System 3 version which runs o
 Their source code is available on Github; more information can be found in <<ch24>>.
 
 All examples in this book are real programs.
-They compile with the Micron compiler `micc`, and most of them run directly with `micc --run`;
-the book's sources include every example as a file.
+They compile with the Micron compiler `micc` <<R21>>, and most of them run directly with `micc --run`;
+the book's sources <<R27>> include every example as a file.
 Where the Micron System follows Wirth's original design,
 the book does not repeat what Wirth and Gutknecht explain better;
-their books are freely available at https://projectoberon.net/ and are referenced throughout.
+their books are freely available (<<R2>>, <<R22>>, <<R24>>, <<R25>>) and are referenced throughout.
 
 === Acknowledgements
 
